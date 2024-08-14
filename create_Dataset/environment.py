@@ -8,7 +8,6 @@ from pathlib import Path
 from threading import Event
 from time import time
 from typing import List, Tuple, Dict
-
 import numpy as np
 
 import events as e
@@ -423,6 +422,7 @@ class BombeRLeWorld(GenericWorld):
             a.reset_game_events()
             if a.available_think_time > 0:
                 a.act(state)
+        a.gameplay.append(state)
 
         # Give agents time to decide
         perm = self.rng.permutation(len(self.active_agents))
@@ -506,3 +506,40 @@ class BombeRLeWorld(GenericWorld):
             # Send exit message to shut down agent
             self.logger.debug(f'Sending exit message to agent <{a.name}>')
             # todo multiprocessing shutdown
+
+    def print_gameplay(self,args):
+        file_name = f'Dataset/{args.n_rounds}_rounds_ordered{args.dataset_counter}.json'
+        diction_list=[]
+        for i in range(args.n_rounds):
+            diction_list.append([])
+        for a in self.agents:
+            for diction in a.gameplay:
+                other_players=[]
+                for l in diction['others']:
+                    other_players.append((l[0],l[1],l[2],(int(l[3][0]),int(l[3][1]))))
+                other_players.append((diction["self"][0],diction["self"][1],diction["self"][2],(int(diction["self"][3][0]),int(diction["self"][3][1]))))
+                diction["others"]=other_players
+                del diction["self"]
+                if not isinstance(diction["explosion_map"],list):
+                    diction["explosion_map"]=diction["explosion_map"].tolist()
+                if not isinstance(diction["field"],list):
+                    diction["field"]=diction["field"].tolist()
+                bom=[]
+                for l in diction["bombs"]:
+                    bom.append(((int(l[0][0]),int(l[0][1])),int(l[1])))
+                diction["bombs"]=bom
+                coin=[]
+                for l in diction["coins"]:
+                    coin.append((int(l[0]),int(l[1])))
+                diction["coins"]=coin
+                game_round=diction["round"]-1
+                del diction["round"]
+                diction_list[game_round].append(diction)
+
+        for i in diction_list:
+            i = sorted(i, key=lambda x: x["step"])
+            for j in i:
+                del j["step"]
+
+        with open(file_name, "w") as file:
+            json.dump(diction_list, file)
