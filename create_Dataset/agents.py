@@ -55,7 +55,7 @@ class Agent:
 
     def __init__(self, agent_name, code_name, display_name, train: bool, backend: "AgentBackend", avatar_sprite_desc, bomb_sprite_desc):
         self.backend = backend
-
+        self.gameplay=[]
         # Load custom avatar or standard robot avatar of assigned color
         try:
             if isinstance(avatar_sprite_desc, bytes):
