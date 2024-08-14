@@ -1,6 +1,7 @@
 import os
 from argparse import ArgumentParser
 from pathlib import Path
+import yaml
 from time import sleep, time
 from tqdm import tqdm
 
@@ -11,20 +12,21 @@ from replay import ReplayWorld
 
 
 class parser_replacement:
-    def __init__(self,training,n_rounds,my_agent,save_stats,log_dir,seed,playparsrscenario,silence_errors,save_replay,skip_frames,turn_based,update_interval,match_name):
-        self.train=training
-        self.n_rounds=n_rounds
-        self.save_stats=save_stats
-        self.log_dir=log_dir
-        self.my_agent=my_agent
-        self.seed=seed
-        self.play_parserscenario=playparsrscenario
-        self.silence_errors=silence_errors
-        self.save_replay=save_replay
-        self.skip_frames=skip_frames
-        self.turn_based=turn_based
-        self.update_interval=update_interval
-        self.match_name=match_name
+    def __init__(self,config):
+        self.train=config["training"]
+        self.n_rounds=config["n_rounds"]
+        self.save_stats=config["save_stats"]
+        self.log_dir=config["log_dir"]
+        self.my_agent=config["my_agent"]
+        self.seed=config["seed"]
+        self.play_parserscenario=config["play_parserscenario"]
+        self.silence_errors=config["silence_errors"]
+        self.save_replay=config["save_replay"]
+        self.skip_frames=config["skip_frames"]
+        self.turn_based=config["turn_based"]
+        self.update_interval=config["update_interval"]
+        self.match_name=config["match_name"]
+        self.dataset_counter=config["dataset_counter"]
 
 class Timekeeper:
     def __init__(self, interval):
@@ -42,7 +44,7 @@ class Timekeeper:
             duration = self.next_time - time()
             sleep(duration)
 
-def world_controller(world, n_rounds, *,
+def world_controller(world, n_rounds, args,*,
                      gui, every_step, turn_based, update_interval):
 
     gui_timekeeper = Timekeeper(update_interval)
@@ -70,14 +72,7 @@ def world_controller(world, n_rounds, *,
             else:
                 # Might want to wait
                 pass
-    print(world.agents)
-    print(world.arena)
-    print(world.bombs)
-    print(world.coins)
-    print(world.explosions)
-    print(world.replay)
-    print(world.bombs)
-
+    world.print_gameplay(args)
     world.end()
 
 
@@ -99,27 +94,19 @@ def main(args):
 
 
     gui = None
-    world_controller(world, args.n_rounds,
+    world_controller(world, args.n_rounds,args,
                     gui=gui, every_step=every_step, turn_based=args.turn_based,
                     update_interval=args.update_interval)
 
 
 if __name__ == '__main__':
     #what about that training_mode?!
-    training=False
-    n_rounds=1
-    my_agent="random_agent"
-    save_stats=True
-    log_dir="Test"
-    seed=0
-    play_parserscenario="classic"
-    silence_errors=False
-    save_replay=True
-    skip_frames=False
-    turn_based=False
-    update_interval=0.1
-    match_name=None
-    args=parser_replacement(training,n_rounds,my_agent,save_stats,log_dir,seed,play_parserscenario,silence_errors,save_replay,skip_frames,turn_based,update_interval,match_name)
+    with open('config.yaml', 'r') as file:
+        config = yaml.safe_load(file)
 
-
+    args=parser_replacement(config)
     main(args)
+    config["dataset_counter"]+=1
+
+    with open('config.yaml', 'w') as file:
+        yaml.dump(config, file)
