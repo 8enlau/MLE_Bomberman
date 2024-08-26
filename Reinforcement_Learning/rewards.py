@@ -1,6 +1,9 @@
 
 
 def reward(situation,action):
+    if action_doesnt_lead_to_endstate(situation,action):
+        return 0 # TODO maybe return -1, to punish long games and try make the player win fast?
+
     if action_leads_to_dying(situation,action):
         return -1000
 # Else the player survives:
