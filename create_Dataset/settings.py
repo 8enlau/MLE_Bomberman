@@ -52,7 +52,7 @@ EXPLOSION_TIMER = 2  # = 1 of bomb explosion + N of lingering around
 # Rules for agents
 TIMEOUT = 0.5
 TRAIN_TIMEOUT = float("inf")
-REWARD_KILL = 5
+REWARD_KILL = 100
 REWARD_COIN = 1
 
 # User input
