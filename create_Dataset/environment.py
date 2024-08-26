@@ -507,7 +507,7 @@ class BombeRLeWorld(GenericWorld):
             self.logger.debug(f'Sending exit message to agent <{a.name}>')
             # todo multiprocessing shutdown
 
-    def print_gameplay(self,args):
+    def print_gameplay(self,args,game_scores):
         file_name = f'Dataset/{args.n_rounds}_rounds_ordered{args.dataset_counter}.json'
         diction_list=[]
         for i in range(args.n_rounds):
@@ -538,8 +538,9 @@ class BombeRLeWorld(GenericWorld):
 
         for i in diction_list:
             i = sorted(i, key=lambda x: x["step"])
-            for j in i:
-                del j["step"]
-
+        for index,i in enumerate(diction_list):
+            i.append(game_scores[index])
+        #    for j in i:
+         #       del j["step"]
         with open(file_name, "w") as file:
             json.dump(diction_list, file)
