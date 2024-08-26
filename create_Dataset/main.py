@@ -27,6 +27,7 @@ class parser_replacement:
         self.update_interval=config["update_interval"]
         self.match_name=config["match_name"]
         self.dataset_counter=config["dataset_counter"]
+        self.continue_without_training=config["continue_without_training"]
 
 class Timekeeper:
     def __init__(self, interval):
@@ -61,6 +62,7 @@ def world_controller(world, n_rounds, args,*,
             pygame.display.flip()
 
     user_input = None
+    game_scores = []
     for _ in tqdm(range(n_rounds)):
         world.new_round()
         while world.running:
@@ -72,7 +74,11 @@ def world_controller(world, n_rounds, args,*,
             else:
                 # Might want to wait
                 pass
-    world.print_gameplay(args)
+        round_scores=[]
+        for a in world.agents:
+            round_scores.append((a.name,a.score))
+        game_scores.append(round_scores)
+    world.print_gameplay(args,game_scores)
     world.end()
 
 
