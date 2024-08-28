@@ -4,7 +4,7 @@ import random
 def reward(situation,action):
     ### Impossible action
     if action_not_possible(situation,action):
-        return -250
+        return -1000
 
     ### Action leads to Dying
     if action_leads_to_suicide(situation,action): # For example blocking self in bomb
@@ -32,6 +32,9 @@ def reward(situation,action):
             possible_reward += 30
         return possible_reward
 
+    if action_leads_to_dying_opponent(situation,action): #For Example standing in the way
+                                        # and therefore blocking opponent to stand in bomb.
+        possible_reward +=250
     if collecting_coin(situation,action):
         possible_reward +=250
     if walking_closer_to_reachable_coin(situation,action):
