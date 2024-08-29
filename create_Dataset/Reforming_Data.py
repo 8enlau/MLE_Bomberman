@@ -1,9 +1,5 @@
 import json
 
-with open("Dataset/10_rounds_ordered15.json", "r") as file:
-    file_read=json.load(file)
-
-
 def rewrite_round_data(step):
     playField = step["field"]
     for i in step["coins"]:
@@ -20,7 +16,10 @@ def rewrite_round_data(step):
         if i[1]==3:
             playField[k][l]=-playField[k][l]
         else:
-            playField[k][l]=-(9-i[1])
+            if playField[k][l]>1:
+                playField[k][l] = -(playField[k][l]+(9-i[1])/10)
+            else:
+                playField[k][l]=-(9-i[1])
     for index1,i in enumerate(step["explosion_map"]):
         for index2,j in enumerate(i):
             if j==1:
@@ -28,8 +27,9 @@ def rewrite_round_data(step):
     return(playField)
 
 if __name__=="__main__":
-    print("asdfasdfasdf")
-    gameRound=file_read[0][6]
+    with open("Dataset/10_rounds_ordered15.json", "r") as file:
+        file_read = json.load(file)
+    gameRound=file_read[0][19]
     gameRound["self"]=gameRound["others"][0]
     del gameRound["others"][0]
     newField=rewrite_round_data(gameRound)
@@ -37,11 +37,9 @@ if __name__=="__main__":
         print(i)
     bombfield=file_read[0][6]["explosion_map"]
     old_filed=file_read[0][5]["field"]
-    sys.exit(0)
     print("############################")
-    for i in old_filed:
-        print(i)
-
+ #   for i in old_filed:
+  #      print(i)
     print("#############################")
-    for i in bombfield:
-        print(i)
+   # for i in bombfield:
+    #    print(i)
