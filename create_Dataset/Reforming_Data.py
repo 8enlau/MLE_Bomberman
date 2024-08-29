@@ -26,20 +26,22 @@ def rewrite_round_data(step):
             if j==1:
                 playField[index1][index2]=-10
     return(playField)
-print("asdfasdfasdf")
-gameRound=file_read[0][6]
-gameRound["self"]=gameRound["others"][0]
-del gameRound["others"][0]
-newField=rewrite_round_data(gameRound)
-for i in newField:
-    print(i)
-bombfield=file_read[0][6]["explosion_map"]
-old_filed=file_read[0][5]["field"]
-sys.exit(0)
-print("############################")
-for i in old_filed:
-    print(i)
 
-print("#############################")
-for i in bombfield:
-    print(i)
+if __name__=="__main__":
+    print("asdfasdfasdf")
+    gameRound=file_read[0][6]
+    gameRound["self"]=gameRound["others"][0]
+    del gameRound["others"][0]
+    newField=rewrite_round_data(gameRound)
+    for i in newField:
+        print(i)
+    bombfield=file_read[0][6]["explosion_map"]
+    old_filed=file_read[0][5]["field"]
+    sys.exit(0)
+    print("############################")
+    for i in old_filed:
+        print(i)
+
+    print("#############################")
+    for i in bombfield:
+        print(i)
