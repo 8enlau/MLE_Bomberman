@@ -8,18 +8,21 @@ def rewrite_round_data(step):
     playField = step["field"]
     for i in step["coins"]:
         playField[i[0]][i[1]]= 5
+    players=10
+    for i in step["others"]:
+        playField[i[3][0]][i[3][1]]=players+int(i[2])*5+i[1]/100
+        players+=10
     for i in step["bombs"]:
         k=i[0][0]
         l=i[0][1]
-        playField[k][l]=-(10+ (i[1]/10))
-    players=10
-    for i in step["others"]:
-        playField[i[3][0]][i[3][1]]=players+int(i[2])+i[1]/100
-        players+=10
+        if i[1]==3:
+            playField[k][l]=-playField[k][l]
+        else:
+            playField[k][l]=-(90-10*i[1])
     for index1,i in enumerate(step["explosion_map"]):
         for index2,j in enumerate(i):
             if j==1:
-                playField[index1][index2]=-1000
+                playField[index1][index2]=-100
     return(playField)
 print("asdfasdfasdf")
 newField=rewrite_round_data(file_read[0][6])
