@@ -195,9 +195,35 @@ def bomb_might_kill_opponent(situation,after_action):
 
 
 def bomb_shortens_path_to_coin(situation,action,after_action):
-    return False #TODO
+    if bomb_will_destroy_crates(situation,after_action):
+        bomb = situation["bombs"][-1]
+        x_bomb = bomb[0][0]
+        y_bomb = bomb[0][1]
+        bombArea = []
+        for i in range(1, 4):
+            bombArea.append([x_bomb + i, y_bomb])
+            bombArea.append([x_bomb - i, y_bomb])
+            bombArea.append([x_bomb, y_bomb + i])
+            bombArea.append([x_bomb, y_bomb - i])
+        formerCrates=[i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]
+        for i in formerCrates:
+            if walking_closer_to_reachable_coin(situation, i):
+                return True
+    return False
 def bomb_will_destroy_crates(situation,after_action):
-    return False #TODO
+    bomb = situation["bombs"][-1]
+    x_bomb = bomb[0][0]
+    y_bomb=bomb[0][1]
+    bombArea=[]
+    for i in range(1,4):
+        bombArea.append([x_bomb + i,y_bomb])
+        bombArea.append([x_bomb - i, y_bomb])
+        bombArea.append([x_bomb, y_bomb + i])
+        bombArea.append([x_bomb, y_bomb - i])
+    if any([i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]):
+        return True
+    return False
+
 def action_leads_to_dying_opponent(situation,action,after_action):
     playerPosition=[(after_action[-1][0],after_action[-1][1])]
     for bomb in situation["bombs"]:
@@ -212,7 +238,7 @@ def collecting_coin(situation,action,after_action):
         if all(np.array(coin) == position):
             return True
 
-def walking_closer_to_reachable_coin(situation,action,after_action):
+def walking_closer_to_reachable_coin(situation,after_action):
     position_new= np.array([after_action[-1][0], after_action[-1][1]])
     position_old = np.array(situation["self"][-1])
     for coin in situation["coins"]:
