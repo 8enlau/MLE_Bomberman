@@ -37,7 +37,7 @@ def reward(situation,action):
         if bomb_shortens_path_to_coin(situation,action,after_action):
             possible_reward += 150
         if bomb_will_destroy_crates(situation,after_action):
-            possible_reward += 30
+            possible_reward += 10
         return possible_reward
 
     if action_leads_to_dying_opponent(situation,action,after_action): #For Example standing in the way
@@ -45,7 +45,7 @@ def reward(situation,action):
         possible_reward +=250
     if collecting_coin(situation,action,after_action):
         possible_reward +=250
-    if walking_closer_to_reachable_coin(situation,action,after_action):
+    if walking_closer_to_reachable_coin(situation,after_action):
         possible_reward +=100
     return possible_reward
 
