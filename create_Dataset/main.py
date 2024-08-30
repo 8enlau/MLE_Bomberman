@@ -79,35 +79,39 @@ def world_controller(world, n_rounds, args,*,
 
 
 
-def main(args):
-
+def mainFunction(config,FurtherAgents=False):
+    args = parser_replacement(config)
     # Initialize environment and agents
     agents = []
-    if args.my_agent:
-        agents.append((args.my_agent, len(agents) < args.train))
-        args.agents = ["rule_based_agent"] * (s.MAX_AGENTS - 1)
-    for agent_name in args.agents:
-        agents.append((agent_name, len(agents) < args.train))
-
+    if FurtherAgents:
+        agents.append((FurtherAgents,True))
+        agents.append((FurtherAgents,True))
+        agents.append(("random_agent",False))
+        agents.append(("rule_based_agent",False))
+    else:
+        if args.my_agent:
+            agents.append((args.my_agent, len(agents) < args.train))
+            args.agents = ["rule_based_agent"] * (s.MAX_AGENTS - 1)
+        for agent_name in args.agents:
+            agents.append((agent_name, len(agents) < args.train))
+    print(agents)
+    print("REMEMBER TO CHECK IF THE TWO TRAIN AGENTS GET DIFFERENT NAMES!")
     world = BombeRLeWorld(args, agents)
     every_step = not args.skip_frames
-
-
 
     gui = None
     world_controller(world, args.n_rounds,args,
                     gui=gui, every_step=every_step, turn_based=args.turn_based,
                     update_interval=args.update_interval)
 
+    args.dataset_counter+=1
+    with open('config.yaml', 'w') as file:
+        yaml.dump(args, file)
+
 
 if __name__ == '__main__':
     #what about that training_mode?!
     with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
-
-    args=parser_replacement(config)
-    main(args)
-    config["dataset_counter"]+=1
-
-    with open('config.yaml', 'w') as file:
-        yaml.dump(config, file)
+#    args=parser_replacement(config)
+    mainFunction(config)
