@@ -79,8 +79,9 @@ def world_controller(world, n_rounds, args,*,
 
 
 
-def mainFunction(config,FurtherAgents=False):
+def mainFunction(config,FurtherAgents=False,weightslock=False):
     args = parser_replacement(config)
+    args.lock=weightslock
     # Initialize environment and agents
     agents = []
     if FurtherAgents:
@@ -106,6 +107,7 @@ def mainFunction(config,FurtherAgents=False):
     argsDict={}
     for key in vars(args):
         argsDict[key]=getattr(args, key)
+    del argsDict["lock"]
     with open('create_Dataset/config.yaml', 'w') as file:
         yaml.dump(argsDict, file, default_flow_style=False, allow_unicode=False)
 
