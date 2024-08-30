@@ -3,6 +3,8 @@ import importlib
 import json
 import os
 import sys
+import threading
+import time
 import torch.optim as optim
 import yaml
 from tqdm import tqdm
@@ -12,7 +14,7 @@ import torch
 from rewards import reward
 from helperFunctions import rewrite_round_data
 from torch.utils.data import DataLoader
-
+from filelock import FileLock
 class handleTraining():
     def __init__(self,yamlConfig):
         self.networkName =  yamlConfig["networkName"]
@@ -41,22 +43,32 @@ class handleTraining():
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5,), std=(0.5,))
             ])
+        self.TrainSetLock = FileLock("shared_TrainSetLock.lock")
+        self.WeightsLock = FileLock("shared_WeightsLock.lock")
     def ExecuteFullTraining(self):
-        #parralelize the following two:
         self.playGames()
         self.prepareGames()
+        thread1 = threading.Thread(target=self.playAndPrepare)
+        thread1.daemon = True  # Make thread3 a daemon thread so it will exit when the main program exits
+        thread1.start()
 
-        # and
-        self.train()
+        thread2 = threading.Thread(target=self.keepTraining)
+        thread2.start()
 
+    def playAndPrepare(self):
+        while True:
+            self.playGames()
+            self.prepareGames()
+    def keepTraining(self):
+        while True:
+            self.train()
     def playGames(self):
-        self.DatasetMain(self.Datasetconfig,self.networkName)
+        self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
 
     def prepareGames(self):
         GameFiles= os.listdir("Dataset")
         NumeratedGames = [i.split("_") for i in GameFiles]
         NumeratedGames = sorted(NumeratedGames, key=lambda x: float(x[0]))
-        print(NumeratedGames)
         Game=NumeratedGames[-1]
         GamePath=""
         for i in Game:
@@ -81,17 +93,34 @@ class handleTraining():
                         readyData.append([rewrite_round_data(s), results])
                         s["others"].append(s["self"])
         print(len(readyData))
-        with open("trainDataSet", "w") as file:
-            json.dump(readyData, file)
+        with self.TrainSetLock:
+            try:
+                with open("trainDataSet", "w") as file:
+                    json.dump(readyData, file)
+            except:
+                time.sleep(1)
+                with open("trainDataSet", "w") as file:
+                    json.dump(readyData, file)
     def train(self):
         # Get weights of network:
-        weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+        with self.WeightsLock:
+            try:
+                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+            except:
+                time.sleep(1)
+                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth")
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
         # Get data and bring it in the right form
-        with open("trainDataSet", "r") as file:
-            file_read = json.load(file)
+        with self.TrainSetLock:
+            try:
+                with open("trainDataSet", "r") as file:
+                    file_read = json.load(file)
+            except FileNotFoundError:
+                time.sleep(1)
+                with open("trainDataSet", "r") as file:
+                    file_read = json.load(file)
         torchData = []
         for i, j in file_read:
             i = torch.tensor(i, dtype=torch.float32) # TODO does int64 make more sense here?
@@ -180,7 +209,12 @@ class handleTraining():
         # Save the Parameters
         for index, i in enumerate(weights.keys()):
             weights[i] = self.weights[index]
-        torch.save(weights, self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
+        with self.WeightsLock:
+            try:
+                torch.save(weights, self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
+            except FileNotFoundError:
+                time.sleep(1)
+                torch.save(weights, self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
         return 0
 
 
@@ -219,6 +253,7 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-#    test.playGames()
- #   test.prepareGames()
-    test.train()
+    test.ExecuteFullTraining()
+  #  test.playGames()
+   # test.prepareGames()
+    #test.train()
