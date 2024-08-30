@@ -508,7 +508,7 @@ class BombeRLeWorld(GenericWorld):
             # todo multiprocessing shutdown
 
     def print_gameplay(self,args):
-        file_name = f'Dataset/{args.n_rounds}_rounds_ordered{args.dataset_counter}.json'
+        file_name = f'Dataset/{args.dataset_counter}_{args.n_rounds}rounds_ordered.json'
         diction_list=[]
         for i in range(args.n_rounds):
             diction_list.append([])
