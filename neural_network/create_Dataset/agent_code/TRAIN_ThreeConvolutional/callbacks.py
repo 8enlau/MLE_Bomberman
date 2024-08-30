@@ -2,7 +2,7 @@ import importlib
 import sys
 
 import numpy as np
-import os
+import os,time
 import torch
 from torch.nn.functional import conv2d, max_pool2d, cross_entropy
 
@@ -63,7 +63,12 @@ def setup(self):
         # output shape is (B, 10)
         torch.save(weights,"weights.pth")
     else:
-        weights = torch.load("weights.pth")
+        with self.lock:
+            try:
+                weights = torch.load("weights.pth")
+            except FileNotFoundError:
+                time.sleep(1)
+                weights = torch.load("weights.pth")
     self.w_conv1 = weights["w_conv1"]
     self.w_conv2 = weights["w_conv2"]
     self.w_h1 = weights["w_h1"]
