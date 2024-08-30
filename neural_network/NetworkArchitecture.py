@@ -1,7 +1,7 @@
 from torch.nn.functional import conv2d,max_pool2d
 import numpy as np
 import matplotlib.pyplot as plt
-
+import json
 import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -11,60 +11,113 @@ import torchvision.transforms as transforms
 
 from torch.nn.functional import conv2d, max_pool2d, cross_entropy
 from tqdm import tqdm
-test_error_rate_4 = []
-def convolution_model(X, w_conv1, w_conv2, w_conv3, w_h2, w_o, p_drop_input, p_drop_hidden):
-    X = dropout(X, p_drop_input)  # Dropout (step 1) on input
+from networkLayout import convolution_model
 
-    conv1 = rectify(conv2d(X, w_conv1))  # convolutional layer 1 out
-    subsampling_layer1 = max_pool2d(conv1, (2, 2))  # subsampling on convolutional layer 1
-    conv_out1 = dropout(subsampling_layer1, p_drop_input)  # Dropout  on first convolutional layer
-
-    conv2 = rectify(conv2d(conv_out1, w_conv2))  # convolutional layer 2 out
-    subsampling_layer2 = max_pool2d(conv2, (2, 2))  # subsampling on convolutional layer 2
-    conv_out2 = dropout(subsampling_layer2, p_drop_input)  # Dropout  on second convolutional layer
-
-    conv3 = rectify(conv2d(conv_out2, w_conv3))  # convolutional layer 3 out
-    subsampling_layer3 = max_pool2d(conv3, (2, 2))  # subsampling on convolutional layer 3
-    conv_out3 = dropout(subsampling_layer3, p_drop_input)  # Dropout  on third convolutional layer
-
-    conv_out3_dimension = torch.prod(torch.tensor(conv_out3.shape)[1:])
-    conv_out3 = conv_out3.reshape(conv_out3.shape[0], conv_out3_dimension)
-
-    h2 = rectify(conv_out3 @ w_h2)  # Layer 1 out
-    h2 = dropout(h2, p_drop_hidden)  # Dropout (step 3) on second hidden layer
-    pre_softmax = h2 @ w_o  # Layer 2 out (FINAL)
-
-    return pre_softmax
-
-
-
-
-
+def init_weights(shape):
+    # Kaiming He initialization (a good initialization is important)
+    # https://arxiv.org/abs/1502.01852
+    std = np.sqrt(2. / shape[0])
+    w = torch.randn(size=shape) * std
+    w.requires_grad = True
+    return w
 # Configuration values:
-n_epochs = 100
-p_drop_input = 0.2
-p_drop_hidden = 0.5
-
+n_epochs = 1000
+p_drop_input = 0.005
+p_drop_hidden = 0.005
+# Consistent across all excercises:
+batch_size = 10
+train_loss_convol = []
+test_loss_convol = []
+train_error_rate_4 = []
+test_error_rate = []
 # initialize weights
 # convolutional layers according to table
-w_conv1=init_weights((32,1,5,5))
+w_conv1=init_weights((32,1,3,3))
 w_save=w_conv1
-w_conv2=init_weights((64,32,5,5))
-w_conv3=init_weights((128,64,3,3))
+w_conv2=init_weights((64,32,2,2))
+w_conv3=init_weights((128,64,1,1))
 # hidden layer with 128 input and 625 output neurons
 w_h2 = init_weights((128, 625))
 # hidden layer with 625 neurons
-w_o = init_weights((625, 10))
+w_o = init_weights((625, 6))
 # output shape is (B, 10)
+
+
+# transform images into normalized tensors
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize(mean=(0.5,), std=(0.5,))
+])
+
+with open("testdata","r") as file:
+    file_read = json.load(file)
+torchData=[]
+for i,j in file_read:
+    i=torch.tensor(i, dtype=torch.float32)
+    i = i.reshape ( -1,17,17)
+    j=torch.tensor(j, dtype=torch.float32)
+    #j = j.reshape(-1,6)
+    torchData.append([i,j])
+del file_read
+train_dataloader = DataLoader(
+    dataset=torchData,
+    batch_size=batch_size,
+    shuffle=True,
+    num_workers=1,
+    pin_memory=True,
+)
+
+test_dataloader = DataLoader(
+    dataset=torchData,
+    batch_size=batch_size,
+    shuffle=False,
+    num_workers=1,
+    pin_memory=True,
+)
+
+
+class RMSprop(optim.Optimizer):
+    """
+    This is a reduced version of the PyTorch internal RMSprop optimizer
+    It serves here as an example
+    """
+    def __init__(self, params, lr=1e-3, alpha=0.5, eps=1e-8):
+        defaults = dict(lr=lr, alpha=alpha, eps=eps)
+        super(RMSprop, self).__init__(params, defaults)
+
+    def step(self):
+        for group in self.param_groups:
+            for p in group['params']:
+                grad = p.grad.data
+                state = self.state[p]
+
+                # state initialization
+                if len(state) == 0:
+                    state['square_avg'] = torch.zeros_like(p.data)
+
+                square_avg = state['square_avg']
+                alpha = group['alpha']
+
+                # update running averages
+                square_avg.mul_(alpha).addcmul_(grad, grad, value=1 - alpha)
+                avg = square_avg.sqrt().add_(group['eps'])
+
+                # gradient update
+                p.data.addcdiv_(grad, avg, value=-group['lr'])
+
+
+
+
+
+
+
+
 
 
 # Update oprimiser to include PRelu params
 optimizer = RMSprop(params=[w_conv1, w_conv2,w_conv3,w_h2, w_o])
 
-train_loss_convol = []
-test_loss_convol = []
-train_error_rate_4 = []
-test_error_rate_4 = []
+
 # put this into a training loop over 100 epochs
 for epoch in range(n_epochs + 1):
     train_loss_this_epoch = []
@@ -90,8 +143,9 @@ for epoch in range(n_epochs + 1):
         optimizer.step()
 
         # Error rate calculation
-        _, predicted = torch.max(noise_py_x, 1)
-        incorrect_train += (predicted != y).sum().item()
+        _,predicted = torch.max(noise_py_x, 1)
+        _, y_max_indices = torch.max(y, 1)
+        incorrect_train += (predicted != y_max_indices).sum().item()
         total_train += y.size(0)
 
     train_loss_convol.append(np.mean(train_loss_this_epoch))
@@ -99,6 +153,7 @@ for epoch in range(n_epochs + 1):
 
     # test periodically
     if epoch % 10 == 0:
+        print("Trainerrorrate: ", train_error_rate_4)
         test_loss_this_epoch = []
         incorrect_test = 0
         total_test = 0
@@ -108,15 +163,21 @@ for epoch in range(n_epochs + 1):
             for idx, batch in enumerate(test_dataloader):
                 x, y = batch
                 # dropout rates = 0 so that there is no dropout on test
-                noise_py_x = convolution_model(x,  w_conv1,w_conv2,w_conv3,w_h2, w_o, p_drop_input, p_drop_hidden)
+                noise_py_x = convolution_model(x,  w_conv1,w_conv2,w_conv3,w_h2, w_o, 0, 0)
 
                 loss = cross_entropy(noise_py_x, y, reduction="mean")
                 test_loss_this_epoch.append(float(loss))
 
                 _, predicted = torch.max(noise_py_x, 1)
-                incorrect_test += (predicted != y).sum().item()
+                _, y_max_indices = torch.max(y, 1)
+
+                incorrect_test += (predicted != y_max_indices).sum().item()
                 total_test += y.size(0)
 
         test_loss_convol.append(np.mean(test_loss_this_epoch))
         error_rate = incorrect_test / total_test
-        test_error_rate_4.append(error_rate)
+        test_error_rate.append(error_rate)
+print(train_loss_convol)
+print(test_loss_convol)
+print(train_error_rate_4)
+print(test_error_rate)
