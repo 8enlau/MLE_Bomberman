@@ -44,7 +44,7 @@ class GenericWorld:
     def __init__(self, args: WorldArgs):
         self.args = args
         self.setup_logging()
-
+        self.lock = args.lock
         self.colors = list(s.AGENT_COLORS)
 
         self.round = 0
@@ -102,11 +102,11 @@ class GenericWorld:
     def build_arena(self) -> Tuple[np.array, List[Coin], List[Agent]]:
         raise NotImplementedError()
 
-    def add_agent(self, agent_dir, name, train=False):
+    def add_agent(self, agent_dir, name, lock=False,train=False,):
         assert len(self.agents) < s.MAX_AGENTS
 
         # if self.args.single_process:
-        backend = SequentialAgentBackend(train, name, agent_dir)
+        backend = SequentialAgentBackend(train, name, agent_dir,lock)
         # else:
         # backend = ProcessAgentBackend(train, name, agent_dir)
         backend.start()
@@ -329,9 +329,9 @@ class BombeRLeWorld(GenericWorld):
         super().__init__(args)
 
         self.rng = np.random.default_rng(args.seed)
-        self.setup_agents(agents)
+        self.setup_agents(agents,args.lock)
 
-    def setup_agents(self, agents):
+    def setup_agents(self, agents,lock):
         # Add specified agents and start their subprocesses
         self.agents = []
         for agent_dir, train in agents:
@@ -339,7 +339,7 @@ class BombeRLeWorld(GenericWorld):
                 name = agent_dir + '_' + str(list([a.code_name for a in self.agents]).count(agent_dir))
             else:
                 name = agent_dir
-            self.add_agent(agent_dir, name, train=train)
+            self.add_agent(agent_dir, name,lock, train=train)
 
     def build_arena(self):
         WALL = -1
