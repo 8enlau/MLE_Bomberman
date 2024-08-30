@@ -21,11 +21,8 @@ def init_weights(shape):
     w.requires_grad = True
     return w
 # Configuration values:
-n_epochs = 1000
-p_drop_input = 0.005
-p_drop_hidden = 0.005
+
 # Consistent across all excercises:
-batch_size = 10
 train_loss_convol = []
 test_loss_convol = []
 train_error_rate_4 = []
