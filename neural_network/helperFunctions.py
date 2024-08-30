@@ -4,7 +4,7 @@ import copy
 def position_after_step(situation,action):
     after_action=copy.deepcopy(situation["self"])
     if action == "UP":
-        after_action[-1][0]-=1
+        after_action[-1][0] -= 1
     elif action == "DOWN":
         after_action[-1][0] += 1
     elif action =="LEFT":
@@ -199,31 +199,32 @@ def bomb_shortens_path_to_coin(situation,action,after_action):
         bomb = situation["bombs"][-1]
         x_bomb = bomb[0][0]
         y_bomb = bomb[0][1]
-        bombArea = []
-        for i in range(1, 4):
-            bombArea.append([x_bomb + i, y_bomb])
-            bombArea.append([x_bomb - i, y_bomb])
-            bombArea.append([x_bomb, y_bomb + i])
-            bombArea.append([x_bomb, y_bomb - i])
+        bombArea = calculate_bomb_area(x_bomb, y_bomb)
         formerCrates=[i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]
         for i in formerCrates:
-            if walking_closer_to_reachable_coin(situation, i):
+            if walking_closer_to_reachable_coin(situation, [i]):
                 return True
     return False
 def bomb_will_destroy_crates(situation,after_action):
     bomb = situation["bombs"][-1]
     x_bomb = bomb[0][0]
     y_bomb=bomb[0][1]
-    bombArea=[]
-    for i in range(1,4):
-        bombArea.append([x_bomb + i,y_bomb])
-        bombArea.append([x_bomb - i, y_bomb])
-        bombArea.append([x_bomb, y_bomb + i])
-        bombArea.append([x_bomb, y_bomb - i])
+    bombArea=calculate_bomb_area(x_bomb,y_bomb)
     if any([i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]):
         return True
     return False
-
+def calculate_bomb_area(x_bomb,y_bomb):
+    bombArea=[]
+    for i in range(1,4):
+        if x_bomb + i < 16:
+            bombArea.append([x_bomb + i,y_bomb])
+        if x_bomb - i > 0:
+            bombArea.append([x_bomb - i, y_bomb])
+        if y_bomb + i <16:
+            bombArea.append([x_bomb, y_bomb + i])
+        if y_bomb - i > 0:
+            bombArea.append([x_bomb, y_bomb - i])
+    return bombArea
 def action_leads_to_dying_opponent(situation,action,after_action):
     playerPosition=[(after_action[-1][0],after_action[-1][1])]
     for bomb in situation["bombs"]:
@@ -244,3 +245,29 @@ def walking_closer_to_reachable_coin(situation,after_action):
     for coin in situation["coins"]:
         if np.linalg.norm(position_old-coin)>np.linalg.norm(position_new-coin):
             return True #TODO not considering Things blocking path yet.
+
+def rewrite_round_data(step):
+    playField = step["field"]
+    for i in step["coins"]:
+        playField[i[0]][i[1]]= 8
+    selfPlayer=step["self"]
+    playField[selfPlayer[3][0]][selfPlayer[3][1]]=6+int(selfPlayer[2])*5/10
+    players=2
+    for i in step["others"]:
+        playField[i[3][0]][i[3][1]]=players+int(i[2])*5/10
+        players+=1
+    for i in step["bombs"]:
+        k=i[0][0]
+        l=i[0][1]
+        if i[1]==3:
+            playField[k][l]=-playField[k][l]
+        else:
+            if playField[k][l]>1:
+                playField[k][l] = -(playField[k][l]+(9-i[1])/10)
+            else:
+                playField[k][l]=-(9-i[1])
+    for index1,i in enumerate(step["explosion_map"]):
+        for index2,j in enumerate(i):
+            if j==1:
+                playField[index1][index2]=-10
+    return(playField)
