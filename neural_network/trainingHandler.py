@@ -6,11 +6,12 @@ import sys
 import torch.optim as optim
 import yaml
 from tqdm import tqdm
-from torch.nn.functional import conv2d, max_pool2d, cross_entropy
+from torch.nn.functional import conv2d, max_pool2d, cross_entropy,mse_loss
 import torchvision.transforms as transforms
 import torch
 from rewards import reward
 from helperFunctions import rewrite_round_data
+from torch.utils.data import DataLoader
 
 class handleTraining():
     def __init__(self,yamlConfig):
@@ -23,20 +24,10 @@ class handleTraining():
         module = importlib.import_module(self.networkName + ".networkLayout")
         self.convolution_model = getattr(module, 'convolution_model')
 
-        # Getting directory of mainFunction.py and its config
-        self.current_directory = os.getcwd()
-        parent_directory = os.path.dirname(self.current_directory)
-        self.create_Dataset = os.path.join(parent_directory, 'create_Dataset')
-        DatasetConfig = os.path.join(self.create_Dataset, 'config.yaml')
-        with open(DatasetConfig, 'r') as file:
-            self.Datasetconfig = yaml.safe_load(file)
-
-#        module = importlib.import_module(self.create_Dataset + ".main")
- #       self.DatasetMain = getattr(module, 'main')
-        sys.path.append(self.create_Dataset)
-        spec = importlib.util.spec_from_file_location("mainFunction", self.create_Dataset + "/main.py")
-        self.DatasetMain = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(self.DatasetMain)
+        with open("create_Dataset/config.yaml", 'r') as file:
+            self.Datasetconfig = yaml.load(file,Loader=yaml.FullLoader)
+        module = importlib.import_module("create_Dataset.main")
+        self.DatasetMain = getattr(module, 'mainFunction')
 
         if not os.path.exists(self.networkName + "/trainProgress.pth"):
             self.progress = {"train_loss_convol": [],
@@ -59,23 +50,24 @@ class handleTraining():
         self.train()
 
     def playGames(self):
-        self.DatasetMain.mainFunction(self.Datasetconfig,self.networkName)
+        self.DatasetMain(self.Datasetconfig,self.networkName)
 
     def prepareGames(self):
-        GameFiles= os.listdir("/Dataset")
+        GameFiles= os.listdir("Dataset")
         NumeratedGames = [i.split("_") for i in GameFiles]
         NumeratedGames = sorted(NumeratedGames, key=lambda x: float(x[0]))
         print(NumeratedGames)
-        Game = NumeratedGames[-1][0] + "_" + NumeratedGames[-1][1]
-        print(Game)
-        with open(self.create_Dataset + "/Dataset" + Game,"r") as file:
+        Game=NumeratedGames[-1]
+        GamePath=""
+        for i in Game:
+            GamePath += i + "_"
+        GamePath = GamePath[:-1]
+        with open("Dataset/" + GamePath,"r") as file:
             file_read = json.load(file)
         readyData = []
         players = copy.deepcopy(file_read[0][0]["others"])
         actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
-        print(players)
         for p in players:
-            print(p)
             pName = p[0]
             for i in range(len(file_read)):
                 for s in file_read[i]:
@@ -93,7 +85,7 @@ class handleTraining():
             json.dump(readyData, file)
     def train(self):
         # Get weights of network:
-        weights = torch.load(self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
+        weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth")
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
@@ -102,15 +94,15 @@ class handleTraining():
             file_read = json.load(file)
         torchData = []
         for i, j in file_read:
-            i = torch.tensor(i, dtype=torch.float32)
+            i = torch.tensor(i, dtype=torch.float32) # TODO does int64 make more sense here?
             i = i.reshape(-1, 17, 17)
-            j = torch.tensor(j, dtype=torch.float32)
+            j = torch.tensor(j, dtype=torch.float32) # TODO does int64 make more sense here?
             # j = j.reshape(-1,6)
             torchData.append([i, j])
         del file_read
         train_dataloader = DataLoader(
             dataset=torchData,
-            batch_size=batch_size,
+            batch_size=self.batch_size,
             shuffle=True,
             num_workers=1,
             pin_memory=True,
@@ -118,7 +110,7 @@ class handleTraining():
 
         test_dataloader = DataLoader(
             dataset=torchData,
-            batch_size=batch_size,
+            batch_size=self.batch_size,
             shuffle=False,
             num_workers=1,
             pin_memory=True,
@@ -135,12 +127,10 @@ class handleTraining():
                 x, y = batch
                 # feed input through model
                 noise_py_x = self.convolution_model(x, self.weights, self.p_drop_input, self.p_drop_hidden)
-
                 # reset the gradient
                 optimizer.zero_grad()
-
                 # the cross-entropy loss function already contains the softmax
-                loss = cross_entropy(noise_py_x, y, reduction="mean")
+                loss = mse_loss(noise_py_x, y, reduction="mean")
 
                 train_loss_this_epoch.append(float(loss))
 
@@ -150,17 +140,18 @@ class handleTraining():
                 optimizer.step()
 
                 # Error rate calculation
-                _, predicted = torch.max(noise_py_x, 1)
+                _,predicted = torch.max(noise_py_x, 2)
                 _, y_max_indices = torch.max(y, 1)
+
                 incorrect_train += (predicted != y_max_indices).sum().item()
                 total_train += y.size(0)
 
-            self.progress["train_loss_convol"].append(np.mean(train_loss_this_epoch))
+            self.progress["train_loss_convol"].append(torch.mean(torch.tensor(train_loss_this_epoch)))
             self.progress["train_error_rate"].append(incorrect_train / total_train)
 
             # test periodically
             if epoch % 10 == 0:
-                print("Trainerrorrate: ", train_error_rate_4)
+                print("Trainerrorrate: ", self.progress["train_error_rate"])
                 test_loss_this_epoch = []
                 incorrect_test = 0
                 total_test = 0
@@ -170,18 +161,18 @@ class handleTraining():
                     for idx, batch in enumerate(test_dataloader):
                         x, y = batch
                         # dropout rates = 0 so that there is no dropout on test
-                        noise_py_x = convolution_model(x, w_conv1, w_conv2, w_conv3, w_h2, w_o, 0, 0)
+                        noise_py_x = self.convolution_model(x, self.weights, 0, 0)
 
-                        loss = cross_entropy(noise_py_x, y, reduction="mean")
+                        loss = mse_loss(noise_py_x, y, reduction="mean")
                         test_loss_this_epoch.append(float(loss))
 
-                        _, predicted = torch.max(noise_py_x, 1)
+                        _, predicted = torch.max(noise_py_x, 2)
                         _, y_max_indices = torch.max(y, 1)
 
                         incorrect_test += (predicted != y_max_indices).sum().item()
                         total_test += y.size(0)
 
-                self.progress["test_loss_convol"].append(np.mean(test_loss_this_epoch))
+                self.progress["test_loss_convol"].append(torch.mean(torch.tensor(test_loss_this_epoch)))
                 error_rate = incorrect_test / total_test
                 self.progress["test_error_rate"].append(error_rate)
         # Save the train progress
@@ -228,5 +219,6 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-    test.playGames()
-    test.prepareGames()
+#    test.playGames()
+ #   test.prepareGames()
+    test.train()
