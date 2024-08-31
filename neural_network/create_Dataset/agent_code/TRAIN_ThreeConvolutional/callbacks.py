@@ -63,7 +63,14 @@ def setup(self):
         # output shape is (B, 10)
         torch.save(weights,"weights.pth")
     else:
-        with self.lock:
+        if self.lock:
+            with self.lock:
+                try:
+                    weights = torch.load("weights.pth")
+                except FileNotFoundError:
+                    time.sleep(1)
+                    weights = torch.load("weights.pth")
+        else:
             try:
                 weights = torch.load("weights.pth")
             except FileNotFoundError:
