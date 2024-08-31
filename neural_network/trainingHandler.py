@@ -23,8 +23,9 @@ class handleTraining():
         self.p_drop_hidden =  yamlConfig["p_drop_hidden"]
         self.batch_size =  yamlConfig["batch_size"]
 
-        module = importlib.import_module(self.networkName + ".networkLayout")
-        self.convolution_model = getattr(module, 'convolution_model')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")
+
 
         with open("create_Dataset/config.yaml", 'r') as file:
             self.Datasetconfig = yaml.load(file,Loader=yaml.FullLoader)
@@ -45,6 +46,10 @@ class handleTraining():
             ])
         self.TrainSetLock = FileLock("shared_TrainSetLock.lock")
         self.WeightsLock = FileLock("shared_WeightsLock.lock")
+
+
+
+
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
@@ -92,7 +97,6 @@ class handleTraining():
                             results.append(reward(s, a))
                         readyData.append([rewrite_round_data(s), results])
                         s["others"].append(s["self"])
-        print(len(readyData))
         with self.TrainSetLock:
             try:
                 with open("trainDataSet", "w") as file:
@@ -133,7 +137,7 @@ class handleTraining():
             dataset=torchData,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=1,
+            num_workers=1, #TODO maybe more if available?!
             pin_memory=True,
         )
 
@@ -144,8 +148,11 @@ class handleTraining():
             num_workers=1,
             pin_memory=True,
         )
+        # Next load the model
+        module = importlib.import_module(self.networkName + ".networkLayout")
+        self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
-        optimizer = RMSprop(params=self.weights)
+        optimizer = RMSprop(params=self.convolution_model.parameters())
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
@@ -155,7 +162,7 @@ class handleTraining():
             for idx, batch in train_progress:
                 x, y = batch
                 # feed input through model
-                noise_py_x = self.convolution_model(x, self.weights, self.p_drop_input, self.p_drop_hidden)
+                noise_py_x = self.convolution_model.forward(x, self.p_drop_input, self.p_drop_hidden)
                 # reset the gradient
                 optimizer.zero_grad()
                 # the cross-entropy loss function already contains the softmax
@@ -190,7 +197,7 @@ class handleTraining():
                     for idx, batch in enumerate(test_dataloader):
                         x, y = batch
                         # dropout rates = 0 so that there is no dropout on test
-                        noise_py_x = self.convolution_model(x, self.weights, 0, 0)
+                        noise_py_x = self.convolution_model(x, 0, 0)
 
                         loss = mse_loss(noise_py_x, y, reduction="mean")
                         test_loss_this_epoch.append(float(loss))
@@ -209,6 +216,10 @@ class handleTraining():
         # Save the Parameters
         for index, i in enumerate(weights.keys()):
             weights[i] = self.weights[index]
+            if torch.equal(weights[i],self.convolution_model.parameters()[index]):
+                print("Parameters didn't change at all!")
+            if torch.equal(weights[i], self.weights[index]):
+                print("You are saving the wrong paramters.")
         with self.WeightsLock:
             try:
                 torch.save(weights, self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
@@ -253,7 +264,7 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-    test.ExecuteFullTraining()
-  #  test.playGames()
-   # test.prepareGames()
-    #test.train()
+  #  test.ExecuteFullTraining()
+    test.playGames()
+    test.prepareGames()
+    test.train()
