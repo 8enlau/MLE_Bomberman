@@ -196,7 +196,7 @@ class AgentRunner:
     Agent callback runner (called by backend).
     """
 
-    def __init__(self, train, agent_name, code_name, result_queue):
+    def __init__(self, train, agent_name, code_name, result_queue,lock=False):
         self.agent_name = agent_name
         self.code_name = code_name
         self.result_queue = result_queue
@@ -218,6 +218,7 @@ class AgentRunner:
 
         self.fake_self = SimpleNamespace()
         self.fake_self.train = train
+        self.fake_self.lock = lock
 
         self.wlogger = logging.getLogger(self.agent_name + '_wrapper')
         self.wlogger.setLevel(s.LOG_AGENT_WRAPPER)
@@ -260,7 +261,8 @@ class AgentBackend:
     Base class connecting the agent to a callback implementation.
     """
 
-    def __init__(self, train, agent_name, code_name, result_queue):
+    def __init__(self, train, agent_name, code_name, result_queue,lock=False):
+        self.lock = lock
         self.train = train
         self.code_name = code_name
         self.agent_name = agent_name
@@ -293,12 +295,12 @@ class SequentialAgentBackend(AgentBackend):
     AgentConnector realised in main thread (easy debugging).
     """
 
-    def __init__(self, train, agent_name, code_name):
-        super().__init__(train, agent_name, code_name, queue.Queue())
+    def __init__(self, train, agent_name, code_name, lock=False):
+        super().__init__(train, agent_name, code_name, queue.Queue(),lock)
         self.runner = None
 
     def start(self):
-        self.runner = AgentRunner(self.train, self.agent_name, self.code_name, self.result_queue)
+        self.runner = AgentRunner(self.train, self.agent_name, self.code_name, self.result_queue, self.lock)
 
     def send_event(self, event_name, *event_args):
         prev_cwd = os.getcwd()
