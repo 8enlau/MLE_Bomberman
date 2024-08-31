@@ -1,5 +1,5 @@
 networkName: "TRAIN_ThreeConvolutional"
-n_epochs: 1000
+n_epochs: 2
 p_drop_input: 0.005
 p_drop_hidden: 0.005
 batch_size: 10
