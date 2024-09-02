@@ -88,7 +88,7 @@ def mainFunction(config,FurtherAgents=False,weightslock=False):
         agents.append((FurtherAgents,True))
         agents.append((FurtherAgents,True))
         possibleAgents = ["random_agent","rule_based_agent","coin_collector_agent",
-                          "fail_agent","peaceful_agent","TRAIN_ThreeConvolutional"]
+                          "peaceful_agent","TRAIN_ThreeConvolutional"]
         agents.append((random.choice(possibleAgents),False))
         agents.append((random.choice(possibleAgents),False))
     else:
