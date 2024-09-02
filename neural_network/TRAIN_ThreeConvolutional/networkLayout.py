@@ -31,12 +31,13 @@ def dropout(X, p_drop=0.5):
     return X
 class NN_model(nn.Module):
     def __init__(self,weights):
+        super(NN_model, self).__init__()
         self.w_conv1 = weights[0]
         self.w_conv2 = weights[1]
         self.w_h1 = weights[2]
         self.w_h2 = weights[3]
         self.w_o = weights[-1]
-        super(NN_model, self).__init__()
+        self.parameters = [self.w_conv1,self.w_conv2,self.w_h1,self.w_h2,self.w_o]
 
     def parameters(self):
         return([self.w_conv1,self.w_conv2,self.w_h1,self.w_h2,self.w_o])
@@ -61,7 +62,7 @@ class NN_model(nn.Module):
         h2 = dropout(h2, p_drop_hidden)  # Dropout (step 3) on second hidden layer
 
         pre_softmax = h2 @ self.w_o  # Layer 2 out (FINAL)
-        return pre_softmax.reshape(pre_softmax.shape[0],1,6)
+        return pre_softmax.reshape(pre_softmax.shape[0],6)
 
 
 def testing():
