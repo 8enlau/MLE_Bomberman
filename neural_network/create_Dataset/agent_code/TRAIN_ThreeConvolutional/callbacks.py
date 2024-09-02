@@ -66,10 +66,10 @@ def setup(self):
         if self.lock:
             with self.lock:
                 try:
-                    weights = torch.load("weights.pth")
+                    weights = torch.load("weights.pth",weights_only=True)
                 except FileNotFoundError:
                     time.sleep(1)
-                    weights = torch.load("weights.pth")
+                    weights = torch.load("weights.pth",weights_only=True)
         else:
             try:
                 weights = torch.load("weights.pth")
