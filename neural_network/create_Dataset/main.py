@@ -4,7 +4,7 @@ from pathlib import Path
 import yaml
 from time import sleep, time
 from tqdm import tqdm
-
+import random
 import create_Dataset.settings as s
 from create_Dataset.environment import BombeRLeWorld
 from create_Dataset.fallbacks import pygame, LOADED_PYGAME
@@ -87,8 +87,10 @@ def mainFunction(config,FurtherAgents=False,weightslock=False):
     if FurtherAgents:
         agents.append((FurtherAgents,True))
         agents.append((FurtherAgents,True))
-        agents.append(("random_agent",False))
-        agents.append(("rule_based_agent",False))
+        possibleAgents = ["random_agent","rule_based_agent","coin_collector_agent",
+                          "fail_agent","peaceful_agent","TRAIN_ThreeConvolutional"]
+        agents.append((random.choice(possibleAgents),False))
+        agents.append((random.choice(possibleAgents),False))
     else:
         if args.my_agent:
             agents.append((args.my_agent, len(agents) < args.train))
