@@ -39,7 +39,7 @@ class handleTraining():
                         "test_error_rate":[]
                         }
         else:
-            self.progress = torch.load(self.networkName + "/trainProgress.pth")
+            self.progress = torch.load(self.networkName + "/trainProgress.pth",weights_only=True)
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5,), std=(0.5,))
@@ -53,20 +53,32 @@ class handleTraining():
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
+        self.barrier = threading.Barrier(2)
+        self.keepRunning = True
         thread1 = threading.Thread(target=self.playAndPrepare)
-        thread1.daemon = True  # Make thread3 a daemon thread so it will exit when the main program exits
-        thread1.start()
+        thread2 = threading.Thread(target=self.train)
 
-        thread2 = threading.Thread(target=self.keepTraining)
+        thread1.start()
         thread2.start()
 
+        try:
+            # Keep the main thread alive or do something else
+            while self.keepRunning:
+                time.sleep(1)
+
+        except KeyboardInterrupt:
+            # Handle exit cleanly on interrupt
+            self.keepRunning = False
+            thread1.join()
+            thread2.join()
+
     def playAndPrepare(self):
-        while True:
-            self.playGames()
-            self.prepareGames()
+        self.playGames()
+        self.prepareGames()
+        self.barrier.wait()
     def keepTraining(self):
-        while True:
-            self.train()
+        self.train()
+        self.barrier.wait()
     def playGames(self):
         self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
 
@@ -109,10 +121,10 @@ class handleTraining():
         # Get weights of network:
         with self.WeightsLock:
             try:
-                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
             except:
                 time.sleep(1)
-                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
@@ -133,6 +145,7 @@ class handleTraining():
             # j = j.reshape(-1,6)
             torchData.append([i, j])
         del file_read
+        print(len(torchData))
         train_dataloader = DataLoader(
             dataset=torchData,
             batch_size=self.batch_size,
@@ -152,7 +165,7 @@ class handleTraining():
         module = importlib.import_module(self.networkName + ".networkLayout")
         self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
-        optimizer = RMSprop(params=self.convolution_model.parameters())
+        optimizer = RMSprop(params=self.convolution_model.parameters)
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
@@ -176,7 +189,7 @@ class handleTraining():
                 optimizer.step()
 
                 # Error rate calculation
-                _,predicted = torch.max(noise_py_x, 2)
+                _,predicted = torch.max(noise_py_x, 1)
                 _, y_max_indices = torch.max(y, 1)
 
                 incorrect_train += (predicted != y_max_indices).sum().item()
@@ -187,7 +200,7 @@ class handleTraining():
 
             # test periodically
             if epoch % 10 == 0:
-                print("Trainerrorrate: ", self.progress["train_error_rate"])
+                print("Recent Trainerrorrate: ", self.progress["train_error_rate"][-5:])
                 test_loss_this_epoch = []
                 incorrect_test = 0
                 total_test = 0
@@ -202,7 +215,7 @@ class handleTraining():
                         loss = mse_loss(noise_py_x, y, reduction="mean")
                         test_loss_this_epoch.append(float(loss))
 
-                        _, predicted = torch.max(noise_py_x, 2)
+                        _, predicted = torch.max(noise_py_x, 1)
                         _, y_max_indices = torch.max(y, 1)
 
                         incorrect_test += (predicted != y_max_indices).sum().item()
@@ -213,19 +226,16 @@ class handleTraining():
                 self.progress["test_error_rate"].append(error_rate)
         # Save the train progress
         torch.save(self.progress, self.networkName + "/trainProgress.pth")
+
         # Save the Parameters
         for index, i in enumerate(weights.keys()):
             weights[i] = self.weights[index]
-            if torch.equal(weights[i],self.convolution_model.parameters()[index]):
-                print("Parameters didn't change at all!")
-            if torch.equal(weights[i], self.weights[index]):
-                print("You are saving the wrong paramters.")
         with self.WeightsLock:
             try:
-                torch.save(weights, self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
+                torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
             except FileNotFoundError:
                 time.sleep(1)
-                torch.save(weights, self.create_Dataset + "/agent_code/" + self.networkName + "/weights.pth")
+                torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
         return 0
 
 
@@ -265,6 +275,6 @@ if __name__=="__main__":
         config = yaml.safe_load(file)
     test= handleTraining(config)
   #  test.ExecuteFullTraining()
-    test.playGames()
-    test.prepareGames()
+  #  test.playGames()
+   # test.prepareGames()
     test.train()
