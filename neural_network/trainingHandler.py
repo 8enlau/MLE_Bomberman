@@ -134,7 +134,7 @@ class handleTraining():
                 with open("trainDataSet", "r") as file:
                     file_read = json.load(file)
             except FileNotFoundError:
-                time.sleep(1)
+                time.sleep(3)
                 with open("trainDataSet", "r") as file:
                     file_read = json.load(file)
         torchData = []
@@ -145,7 +145,6 @@ class handleTraining():
             # j = j.reshape(-1,6)
             torchData.append([i, j])
         del file_read
-        print(len(torchData))
         train_dataloader = DataLoader(
             dataset=torchData,
             batch_size=self.batch_size,
@@ -274,7 +273,7 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-  #  test.ExecuteFullTraining()
+    test.ExecuteFullTraining()
   #  test.playGames()
    # test.prepareGames()
-    test.train()
+   # test.train()
