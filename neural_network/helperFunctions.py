@@ -249,11 +249,11 @@ def walking_closer_to_reachable_coin(situation,after_action):
 def rewrite_round_data(step):
     playField = step["field"]
     for i in step["coins"]:
-        playField[i[0]][i[1]]= 8
+        playField[i[0]][i[1]]= 10
     selfPlayer=step["self"]
-    playField[selfPlayer[3][0]][selfPlayer[3][1]]=6+int(selfPlayer[2])*5/10
+    playField[selfPlayer[3][0]][selfPlayer[3][1]]=5+int(selfPlayer[2])*5/10
     for i in step["others"]:
-        playField[i[3][0]][i[3][1]]=4+int(i[2])*5/10
+        playField[i[3][0]][i[3][1]]=2+int(i[2])*5/10
     for i in step["bombs"]:
         k=i[0][0]
         l=i[0][1]
@@ -263,9 +263,9 @@ def rewrite_round_data(step):
             if playField[k][l]>1:
                 playField[k][l] = -(playField[k][l]+(9-i[1])/10)
             else:
-                playField[k][l]=-(9-i[1])
+                playField[k][l]=-(19-i[1])
     for index1,i in enumerate(step["explosion_map"]):
         for index2,j in enumerate(i):
             if j==1:
-                playField[index1][index2]=-10
+                playField[index1][index2]=-20
     return(playField)
