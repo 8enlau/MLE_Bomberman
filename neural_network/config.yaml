@@ -2,4 +2,4 @@ networkName: "TRAIN_ThreeConvolutional"
 n_epochs: 15
 p_drop_input: 0.005
 p_drop_hidden: 0.005
-batch_size: 16384
+batch_size: 32768

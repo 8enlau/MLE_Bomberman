@@ -3,6 +3,7 @@ import importlib
 import json
 import os
 import sys
+import numpy as np
 import threading
 import time
 import torch.optim as optim
@@ -53,32 +54,16 @@ class handleTraining():
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
-        self.barrier = threading.Barrier(2)
-        self.keepRunning = True
-        thread1 = threading.Thread(target=self.playAndPrepare)
-        thread2 = threading.Thread(target=self.train)
 
-        thread1.start()
-        thread2.start()
-
-        try:
-            # Keep the main thread alive or do something else
-            while self.keepRunning:
-                time.sleep(1)
-
-        except KeyboardInterrupt:
-            # Handle exit cleanly on interrupt
-            self.keepRunning = False
-            thread1.join()
-            thread2.join()
+        while self.progress["train_error_rate"][-1]>0.01:
+            self.playGames()
+            self.prepareGames()
+            
 
     def playAndPrepare(self):
         self.playGames()
         self.prepareGames()
-        self.barrier.wait()
-    def keepTraining(self):
-        self.train()
-        self.barrier.wait()
+
     def playGames(self):
         self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
 
@@ -91,6 +76,7 @@ class handleTraining():
         for i in Game:
             GamePath += i + "_"
         GamePath = GamePath[:-1]
+        print(GamePath)
         with open("Dataset/" + GamePath,"r") as file:
             file_read = json.load(file)
         readyData = []
@@ -107,17 +93,33 @@ class handleTraining():
                         results = []
                         for a in actions:
                             results.append(reward(s, a))
-                        readyData.append([rewrite_round_data(s), results])
+                        newfield = rewrite_round_data(s)
+                        readyData.append([newfield, results])
+                        # Add rotating field here:
+                        turnedResults=copy.deepcopy(results)
+                        turnedResults[0] = results[2]
+                        turnedResults[1] = results[3]
+                        turnedResults[2] = results[1]
+                        turnedResults[3] = results[0]
+                        readyData.append([[list(reversed(col)) for col in zip(*newfield)], turnedResults]) # 90 degrees
+                        turnedResults=copy.deepcopy(results)
+                        turnedResults[0] = results[1]
+                        turnedResults[1] = results[0]
+                        turnedResults[2] = results[3]
+                        turnedResults[3] = results[2]
+                        readyData.append([[row[::-1] for row in newfield[::-1]], turnedResults]) # 180 degrees
+                        turnedResults=copy.deepcopy(results)
+                        turnedResults[0] = results[3]
+                        turnedResults[1] = results[2]
+                        turnedResults[2] = results[0]
+                        turnedResults[3] = results[1]
+                        readyData.append([[list(col) for col in zip(*newfield)][::-1], turnedResults]) # 270 degrees
+
+
                         s["others"].append(s["self"])
-        with self.TrainSetLock:
-            try:
-                with open("trainDataSet", "w") as file:
-                    json.dump(readyData, file)
-            except:
-                time.sleep(1)
-                with open("trainDataSet", "w") as file:
-                    json.dump(readyData, file)
-    def train(self):
+        print(len(readyData))
+
+        print("Beginning training.")
         # Get weights of network:
         with self.WeightsLock:
             try:
@@ -128,23 +130,16 @@ class handleTraining():
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
+        
         # Get data and bring it in the right form
-        with self.TrainSetLock:
-            try:
-                with open("trainDataSet", "r") as file:
-                    file_read = json.load(file)
-            except FileNotFoundError:
-                time.sleep(3)
-                with open("trainDataSet", "r") as file:
-                    file_read = json.load(file)
         torchData = []
-        for i, j in file_read:
+        for i, j in readyData:
             i = torch.tensor(i, dtype=torch.float32) # TODO does int64 make more sense here?
             i = i.reshape(-1, 17, 17)
             j = torch.tensor(j, dtype=torch.float32) # TODO does int64 make more sense here?
             # j = j.reshape(-1,6)
             torchData.append([i, j])
-        del file_read
+        del readyData
         train_dataloader = DataLoader(
             dataset=torchData,
             batch_size=self.batch_size,
@@ -276,4 +271,3 @@ if __name__=="__main__":
    # test.ExecuteFullTraining()
     test.playGames()
     test.prepareGames()
-   # test.train()
