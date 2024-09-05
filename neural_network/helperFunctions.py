@@ -252,10 +252,8 @@ def rewrite_round_data(step):
         playField[i[0]][i[1]]= 8
     selfPlayer=step["self"]
     playField[selfPlayer[3][0]][selfPlayer[3][1]]=6+int(selfPlayer[2])*5/10
-    players=2
     for i in step["others"]:
-        playField[i[3][0]][i[3][1]]=players+int(i[2])*5/10
-        players+=1
+        playField[i[3][0]][i[3][1]]=4+int(i[2])*5/10
     for i in step["bombs"]:
         k=i[0][0]
         l=i[0][1]
