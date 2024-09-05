@@ -53,32 +53,19 @@ class handleTraining():
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
-        self.barrier = threading.Barrier(2)
-        self.keepRunning = True
-        thread1 = threading.Thread(target=self.playAndPrepare)
-        thread2 = threading.Thread(target=self.train)
+        self.train()
 
-        thread1.start()
-        thread2.start()
-
-        try:
-            # Keep the main thread alive or do something else
-            while self.keepRunning:
-                time.sleep(1)
-
-        except KeyboardInterrupt:
-            # Handle exit cleanly on interrupt
-            self.keepRunning = False
-            thread1.join()
-            thread2.join()
+        while self.progress["train_error_rate"][-1]>0.01:
+            self.playGames()
+            self.prepareGames()
+            self.train()
+            
 
     def playAndPrepare(self):
         self.playGames()
         self.prepareGames()
-        self.barrier.wait()
     def keepTraining(self):
         self.train()
-        self.barrier.wait()
     def playGames(self):
         self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
 
@@ -274,6 +261,6 @@ if __name__=="__main__":
         config = yaml.safe_load(file)
     test= handleTraining(config)
     test.ExecuteFullTraining()
-  #  test.playGames()
-   # test.prepareGames()
+ #   test.playGames()
+  #  test.prepareGames()
    # test.train()
