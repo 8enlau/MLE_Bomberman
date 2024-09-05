@@ -116,7 +116,7 @@ def mainFunction(config,FurtherAgents=False,weightslock=False):
 
 if __name__ == '__main__':
     #what about that training_mode?!
-    with open('config.yaml', 'r',Loader=yaml.FullLoader) as file:
+    with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
 #    args=parser_replacement(config)
 
