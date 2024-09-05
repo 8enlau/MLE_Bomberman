@@ -15,7 +15,6 @@ import torch
 from rewards import reward
 from helperFunctions import rewrite_round_data
 from torch.utils.data import DataLoader
-from filelock import FileLock
 class handleTraining():
     def __init__(self,yamlConfig):
         self.networkName =  yamlConfig["networkName"]
@@ -45,8 +44,6 @@ class handleTraining():
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5,), std=(0.5,))
             ])
-        self.TrainSetLock = FileLock("shared_TrainSetLock.lock")
-        self.WeightsLock = FileLock("shared_WeightsLock.lock")
 
 
 
@@ -65,7 +62,7 @@ class handleTraining():
         self.prepareGames()
 
     def playGames(self):
-        self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
+        self.DatasetMain(self.Datasetconfig,self.networkName,)
 
     def prepareGames(self):
         GameFiles= os.listdir("Dataset")
@@ -121,12 +118,11 @@ class handleTraining():
 
         print("Beginning training.")
         # Get weights of network:
-        with self.WeightsLock:
-            try:
-                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
-            except:
-                time.sleep(1)
-                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
+        try:
+            weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
+        except:
+            time.sleep(1)
+            weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
