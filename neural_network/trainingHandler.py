@@ -102,24 +102,18 @@ class handleTraining():
                         turnedResults[1] = results[3]
                         turnedResults[2] = results[1]
                         turnedResults[3] = results[0]
-                        print(results)
-                        print(turnedResults)
                         readyData.append([[list(reversed(col)) for col in zip(*newfield)], turnedResults]) # 90 degrees
                         turnedResults=copy.deepcopy(results)
                         turnedResults[0] = results[1]
                         turnedResults[1] = results[0]
                         turnedResults[2] = results[3]
                         turnedResults[3] = results[2]
-                        print(results)
-                        print(turnedResults)
                         readyData.append([[row[::-1] for row in newfield[::-1]], turnedResults]) # 180 degrees
                         turnedResults=copy.deepcopy(results)
                         turnedResults[0] = results[3]
                         turnedResults[1] = results[2]
                         turnedResults[2] = results[0]
                         turnedResults[3] = results[1]
-                        print(results)
-                        print(turnedResults)
                         readyData.append([[list(col) for col in zip(*newfield)][::-1], turnedResults]) # 270 degrees
 
 
