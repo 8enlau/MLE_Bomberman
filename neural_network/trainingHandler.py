@@ -3,6 +3,7 @@ import importlib
 import json
 import os
 import sys
+import numpy as np
 import threading
 import time
 import torch.optim as optim
@@ -53,19 +54,16 @@ class handleTraining():
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
-        self.train()
 
         while self.progress["train_error_rate"][-1]>0.01:
             self.playGames()
             self.prepareGames()
-            self.train()
             
 
     def playAndPrepare(self):
         self.playGames()
         self.prepareGames()
-    def keepTraining(self):
-        self.train()
+
     def playGames(self):
         self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
 
@@ -78,6 +76,7 @@ class handleTraining():
         for i in Game:
             GamePath += i + "_"
         GamePath = GamePath[:-1]
+        print(GamePath)
         with open("Dataset/" + GamePath,"r") as file:
             file_read = json.load(file)
         readyData = []
@@ -118,15 +117,9 @@ class handleTraining():
 
 
                         s["others"].append(s["self"])
-        with self.TrainSetLock:
-            try:
-                with open("trainDataSet", "w") as file:
-                    json.dump(readyData, file)
-            except:
-                time.sleep(1)
-                with open("trainDataSet", "w") as file:
-                    json.dump(readyData, file)
-    def train(self):
+        print(len(readyData))
+
+        print("Beginning training.")
         # Get weights of network:
         with self.WeightsLock:
             try:
@@ -137,28 +130,21 @@ class handleTraining():
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
+        
         # Get data and bring it in the right form
-        with self.TrainSetLock:
-            try:
-                with open("trainDataSet", "r") as file:
-                    file_read = json.load(file)
-            except FileNotFoundError:
-                time.sleep(3)
-                with open("trainDataSet", "r") as file:
-                    file_read = json.load(file)
         torchData = []
-        for i, j in file_read:
+        for i, j in readyData:
             i = torch.tensor(i, dtype=torch.float32) # TODO does int64 make more sense here?
             i = i.reshape(-1, 17, 17)
             j = torch.tensor(j, dtype=torch.float32) # TODO does int64 make more sense here?
             # j = j.reshape(-1,6)
             torchData.append([i, j])
-        del file_read
+        del readyData
         train_dataloader = DataLoader(
             dataset=torchData,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=1, #TODO maybe more if available?!
+            num_workers=2, #TODO maybe more if available?!
             pin_memory=True,
         )
 
@@ -166,7 +152,7 @@ class handleTraining():
             dataset=torchData,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=1,
+            num_workers=2,
             pin_memory=True,
         )
         # Next load the model
@@ -282,7 +268,6 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-    test.ExecuteFullTraining()
- #   test.playGames()
-  #  test.prepareGames()
-   # test.train()
+   # test.ExecuteFullTraining()
+    test.playGames()
+    test.prepareGames()
