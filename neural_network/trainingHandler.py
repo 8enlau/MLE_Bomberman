@@ -55,11 +55,7 @@ class handleTraining():
         while self.progress["train_error_rate"][-1]>0.01:
             self.playGames()
             self.prepareGames()
-            
 
-    def playAndPrepare(self):
-        self.playGames()
-        self.prepareGames()
 
     def playGames(self):
         self.DatasetMain(self.Datasetconfig,self.networkName,)
@@ -220,12 +216,11 @@ class handleTraining():
         # Save the Parameters
         for index, i in enumerate(weights.keys()):
             weights[i] = self.weights[index]
-        with self.WeightsLock:
-            try:
-                torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
-            except FileNotFoundError:
-                time.sleep(1)
-                torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+        try:
+            torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+        except FileNotFoundError:
+            time.sleep(1)
+            torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
         return 0
 
 
