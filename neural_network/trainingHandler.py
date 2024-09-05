@@ -22,7 +22,9 @@ class handleTraining():
         self.p_drop_input =  yamlConfig["p_drop_input"]
         self.p_drop_hidden =  yamlConfig["p_drop_hidden"]
         self.batch_size =  yamlConfig["batch_size"]
-
+        self.alpha = float(yamlConfig["alpha"])
+        self.learningRate = float(yamlConfig["learningRate"])
+        self.epsilon = float(yamlConfig["epsilon"])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
 
@@ -145,7 +147,7 @@ class handleTraining():
         module = importlib.import_module(self.networkName + ".networkLayout")
         self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
-        optimizer = RMSprop(params=self.convolution_model.parameters)
+        optimizer = RMSprop(params=self.convolution_model.parameters,lr=self.learningRate,alpha=self.alpha,eps=self.epsilon)
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
