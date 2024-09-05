@@ -45,9 +45,6 @@ class handleTraining():
             transforms.Normalize(mean=(0.5,), std=(0.5,))
             ])
 
-
-
-
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
@@ -107,11 +104,8 @@ class handleTraining():
                         turnedResults[2] = results[0]
                         turnedResults[3] = results[1]
                         readyData.append([[list(col) for col in zip(*newfield)][::-1], turnedResults]) # 270 degrees
-
-
                         s["others"].append(s["self"])
         print(len(readyData))
-
         print("Beginning training.")
         # Get weights of network:
         try:
@@ -259,6 +253,6 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-   # test.ExecuteFullTraining()
-    test.playGames()
-    test.prepareGames()
+    test.ExecuteFullTraining()
+   # test.playGames()
+    #test.prepareGames()
