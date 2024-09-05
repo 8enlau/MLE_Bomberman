@@ -1,7 +1,7 @@
 from random import shuffle
 
 import numpy as np
-import settings as s
+import create_Dataset.settings as s
 
 
 def look_for_targets(free_space, start, targets, logger=None):
