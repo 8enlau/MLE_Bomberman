@@ -15,7 +15,6 @@ import torch
 from rewards import reward
 from helperFunctions import rewrite_round_data
 from torch.utils.data import DataLoader
-from filelock import FileLock
 class handleTraining():
     def __init__(self,yamlConfig):
         self.networkName =  yamlConfig["networkName"]
@@ -23,7 +22,9 @@ class handleTraining():
         self.p_drop_input =  yamlConfig["p_drop_input"]
         self.p_drop_hidden =  yamlConfig["p_drop_hidden"]
         self.batch_size =  yamlConfig["batch_size"]
-
+        self.alpha = float(yamlConfig["alpha"])
+        self.learningRate = float(yamlConfig["learningRate"])
+        self.epsilon = float(yamlConfig["epsilon"])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
 
@@ -45,11 +46,6 @@ class handleTraining():
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5,), std=(0.5,))
             ])
-        self.TrainSetLock = FileLock("shared_TrainSetLock.lock")
-        self.WeightsLock = FileLock("shared_WeightsLock.lock")
-
-
-
 
     def ExecuteFullTraining(self):
         self.playGames()
@@ -58,14 +54,10 @@ class handleTraining():
         while self.progress["train_error_rate"][-1]>0.01:
             self.playGames()
             self.prepareGames()
-            
 
-    def playAndPrepare(self):
-        self.playGames()
-        self.prepareGames()
 
     def playGames(self):
-        self.DatasetMain(self.Datasetconfig,self.networkName,self.WeightsLock)
+        self.DatasetMain(self.Datasetconfig,self.networkName,)
 
     def prepareGames(self):
         GameFiles= os.listdir("Dataset")
@@ -114,19 +106,15 @@ class handleTraining():
                         turnedResults[2] = results[0]
                         turnedResults[3] = results[1]
                         readyData.append([[list(col) for col in zip(*newfield)][::-1], turnedResults]) # 270 degrees
-
-
                         s["others"].append(s["self"])
         print(len(readyData))
-
         print("Beginning training.")
         # Get weights of network:
-        with self.WeightsLock:
-            try:
-                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
-            except:
-                time.sleep(1)
-                weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
+        try:
+            weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
+        except:
+            time.sleep(1)
+            weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
@@ -144,7 +132,7 @@ class handleTraining():
             dataset=torchData,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=2, #TODO maybe more if available?!
+            num_workers=1, #TODO maybe more if available?!
             pin_memory=True,
         )
 
@@ -152,14 +140,14 @@ class handleTraining():
             dataset=torchData,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=2,
+            num_workers=1,
             pin_memory=True,
         )
         # Next load the model
         module = importlib.import_module(self.networkName + ".networkLayout")
         self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
-        optimizer = RMSprop(params=self.convolution_model.parameters)
+        optimizer = RMSprop(params=self.convolution_model.parameters,lr=self.learningRate,alpha=self.alpha,eps=self.epsilon)
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
@@ -224,12 +212,11 @@ class handleTraining():
         # Save the Parameters
         for index, i in enumerate(weights.keys()):
             weights[i] = self.weights[index]
-        with self.WeightsLock:
-            try:
-                torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
-            except FileNotFoundError:
-                time.sleep(1)
-                torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+        try:
+            torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
+        except FileNotFoundError:
+            time.sleep(1)
+            torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
         return 0
 
 
@@ -271,3 +258,4 @@ if __name__=="__main__":
     test.ExecuteFullTraining()
    # test.playGames()
    # test.prepareGames()
+
