@@ -87,20 +87,11 @@ def mainFunction(config,FurtherAgents=False):
         agents.append((FurtherAgents,True))
         agents.append((FurtherAgents,True))
         agents.append(("rule_based_agent",False))
-<<<<<<< HEAD
-
-        possibleAgents = ["random_agent","rule_based_agent","coin_collector_agent",
-                          "peaceful_agent","TRAIN_ThreeConvolutional"]
-        lastAgent=random.choice(possibleAgents)
-        print(lastAgent)
-        agents.append((lastAgent,False))
-=======
         possibleAgents = ["random_agent","rule_based_agent","coin_collector_agent",
                           "peaceful_agent","TRAIN_ThreeConvolutional"]
         last_agent = random.choice(possibleAgents)
         print("Last agent: ", last_agent)
         agents.append((last_agent,False))
->>>>>>> b165afefe8d7568c04f8ee1fe92f929e711142f3
     else:
         if args.my_agent:
             agents.append((args.my_agent, len(agents) < args.train))
