@@ -17,7 +17,7 @@ def reward(situation,action):
 
     ### Action leads to Dying
     if action_leads_to_suicide(situation,action,after_action): # For example blocking self in bomb
-        return -1001
+        return -1000
     if action_leads_to_dying(situation,after_action):
         return -1000
 
@@ -33,13 +33,13 @@ def reward(situation,action):
     possible_reward = 10
     if action=="BOMB":
         if bomb_will_kill_opponent(situation,after_action):
-            possible_reward +=800
+            possible_reward +=1000
         if bomb_might_kill_opponent(situation,after_action):
-            possible_reward += random.uniform(0,400)
+            possible_reward += 50
         if bomb_shortens_path_to_coin(situation,action,after_action):
             possible_reward += 100
         if bomb_will_destroy_crates(situation,after_action):
-            possible_reward += 0
+            possible_reward += 10
         return possible_reward
 
     if action_leads_to_dying_opponent(situation,action,after_action): #For Example standing in the way
