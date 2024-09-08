@@ -90,12 +90,6 @@ def setup(self):
         except FileNotFoundError:
             time.sleep(1)
             weights = torch.load("weights.pth",weights_only=True)
-        else:
-            try:
-                weights = torch.load("weights.pth")
-            except FileNotFoundError:
-                time.sleep(1)
-                weights = torch.load("weights.pth")
     self.w_conv1 = weights["w_conv1"]
     self.w_conv2 = weights["w_conv2"]
     self.w_h1 = weights["w_h1"]
