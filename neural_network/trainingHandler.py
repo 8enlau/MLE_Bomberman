@@ -12,9 +12,10 @@ from tqdm import tqdm
 from torch.nn.functional import conv2d, max_pool2d, cross_entropy,mse_loss
 import torchvision.transforms as transforms
 import torch
+import multiprocessing
 from rewards import reward
 from helperFunctions import rewrite_round_data
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 class handleTraining():
     def __init__(self,yamlConfig):
         self.networkName =  yamlConfig["networkName"]
@@ -120,27 +121,38 @@ class handleTraining():
             self.weights.append(item)
         
         # Get data and bring it in the right form
-        torchData = []
+        inputs = []
+        labels = []
         for i, j in readyData:
             i = torch.tensor(i, dtype=torch.float32) # TODO does int64 make more sense here?
             i = i.reshape(-1, 17, 17)
             j = torch.tensor(j, dtype=torch.float32) # TODO does int64 make more sense here?
             # j = j.reshape(-1,6)
-            torchData.append([i, j])
+            inputs.append(i)
+            labels.append(j)
         del readyData
+        # Stack inputs and labels
+        inputs = torch.stack(inputs)
+        labels = torch.stack(labels)
+        FullDataset = TensorDataset(inputs, labels)
+        num_workers = multiprocessing.cpu_count()
+        print("number of workers: ", num_workers)
+        if num_workers>1:
+            num_workers=num_workers-1
+
         train_dataloader = DataLoader(
-            dataset=torchData,
+            dataset=FullDataset,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=1, #TODO maybe more if available?!
+            num_workers=num_workers,
             pin_memory=True,
         )
 
         test_dataloader = DataLoader(
-            dataset=torchData,
+            dataset=FullDataset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=1,
+            num_workers=num_workers,
             pin_memory=True,
         )
         # Next load the model
