@@ -46,8 +46,9 @@ def reward(situationDictionary,action):
     if action_leads_to_dying_opponent(situation,action,after_action): #For Example standing in the way
                                         # and therefore blocking opponent to stand in bomb.
         possible_reward +=1000
+        print("Killing opponent")
     if collecting_coin(situation,action,after_action):
-        possible_reward +=500
+        possible_reward +=300
     if walking_closer_to_reachable_coin(situation,after_action):
         possible_reward +=200
     if no_coin_reachable(situation,after_action):
@@ -57,9 +58,25 @@ def reward(situationDictionary,action):
 
 
 if __name__=="__main__":
-    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/create_Dataset/Dataset/6_4rounds_ordered.json", "r") as file:
+    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/19_4rounds_ordered.json", "r") as file:
         file_read = json.load(file)
     readyData=[]
+
+    situation = file_read[0][18]
+    p = situation["others"][-1]
+
+    situation["self"] = p
+    del situation["others"][-1]
+    print(situation)
+
+    actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
+    rew = []
+    for a in actions:
+        rew.append(reward(situation, a))
+    print("rewards: ", rew)
+    print("wwwwwwwwwwwwwwwwwwww")
+    sys.exit(-1)
+
     players = copy.deepcopy(file_read[0][0]["others"])
     actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
     print(players)
