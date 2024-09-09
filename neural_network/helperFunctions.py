@@ -305,7 +305,7 @@ def bfs_find_path(situation, start, goal):
 
     while queue:
         x, y = queue.popleft()
-        if (x, y) == goal:
+        if [x, y] == goal:
             path = []
             while parent[x][y] is not None:
                 path.append((x, y))
