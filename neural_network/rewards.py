@@ -46,7 +46,6 @@ def reward(situationDictionary,action):
     if action_leads_to_dying_opponent(situation,action,after_action): #For Example standing in the way
                                         # and therefore blocking opponent to stand in bomb.
         possible_reward +=1000
-        print("Killing opponent")
     if collecting_coin(situation,action,after_action):
         possible_reward +=300
     if walking_closer_to_reachable_coin(situation,after_action):
