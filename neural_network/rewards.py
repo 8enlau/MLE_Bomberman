@@ -1,5 +1,5 @@
 import copy
-import random,json
+import json
 from helperFunctions import (action_not_possible,action_leads_to_suicide,action_leads_to_dying,
                              in_scope_of_bomb_after_action,cannot_escape_after_action,
                              bomb_will_kill_opponent, bomb_might_kill_opponent, bomb_shortens_path_to_coin,
@@ -8,9 +8,9 @@ from helperFunctions import (action_not_possible,action_leads_to_suicide,action_
                              walking_closer_to_reachable_coin,
                              rewrite_round_data)
 #TODO IMPORTANT! remove ALL bombs added to the dictionary after all computtations. Don't add any in the best case.
-def reward(situation,action):
+def reward(situationDictionary,action):
+    situation = copy.deepcopy(situationDictionary)
     after_action=position_after_step(situation,action)
-    # TODO we might add a bomb above to the situation, make sure to remove it afterwards.
     ### Impossible action
     if action_not_possible(situation,action,after_action):
         return -2000
@@ -53,7 +53,7 @@ def reward(situation,action):
 
 
 if __name__=="__main__":
-    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/create_Dataset/Dataset/10_rounds_ordered15.json", "r") as file:
+    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/create_Dataset/Dataset/6_4rounds_ordered.json", "r") as file:
         file_read = json.load(file)
     readyData=[]
     players = copy.deepcopy(file_read[0][0]["others"])
