@@ -1,9 +1,9 @@
 continue_without_training: true
-dataset_counter: 3
+dataset_counter: 21
 log_dir: Test
 match_name: None
 my_agent: random_agent
-n_rounds: 50
+n_rounds: 40
 play_parserscenario: classic
 save_replay: false
 save_stats: false
