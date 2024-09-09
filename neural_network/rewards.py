@@ -6,7 +6,7 @@ from helperFunctions import (action_not_possible,action_leads_to_suicide,action_
                              bomb_will_destroy_crates, action_leads_to_dying_opponent,
                              collecting_coin,position_after_step,
                              walking_closer_to_reachable_coin,
-                             rewrite_round_data)
+                             rewrite_round_data,no_coin_reachable,closer_distance_to_coin)
 #TODO IMPORTANT! remove ALL bombs added to the dictionary after all computtations. Don't add any in the best case.
 def reward(situationDictionary,action):
     situation = copy.deepcopy(situationDictionary)
@@ -30,25 +30,29 @@ def reward(situationDictionary,action):
 
 
     ### Player can survive, try to maximise gain:
-    possible_reward = 10
+    possible_reward = 0
     if action=="BOMB":
         if bomb_will_kill_opponent(situation,after_action):
             possible_reward +=1000
         if bomb_might_kill_opponent(situation,after_action):
-            possible_reward += 50
+            possible_reward += 25
         if bomb_shortens_path_to_coin(situation,action,after_action):
-            possible_reward += 100
+            possible_reward += 50
         if bomb_will_destroy_crates(situation,after_action):
-            possible_reward += 10
+            possible_reward += 15
         return possible_reward
-
+    if action != "WAIT":
+        possible_reward+=10
     if action_leads_to_dying_opponent(situation,action,after_action): #For Example standing in the way
                                         # and therefore blocking opponent to stand in bomb.
         possible_reward +=1000
     if collecting_coin(situation,action,after_action):
-        possible_reward +=250
+        possible_reward +=500
     if walking_closer_to_reachable_coin(situation,after_action):
-        possible_reward +=100
+        possible_reward +=200
+    if no_coin_reachable(situation,after_action):
+        if closer_distance_to_coin(situation, after_action):
+            possible_reward +=100
     return possible_reward
 
 
