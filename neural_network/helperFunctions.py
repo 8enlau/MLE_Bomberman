@@ -1,6 +1,7 @@
 import numpy as np
 import copy
-#TODO Check if the coordinates are correct. x for height,y for width.
+from collections import deque
+
 def position_after_step(situation,action):
     after_action=copy.deepcopy(situation["self"])
     if action == "UP":
@@ -204,9 +205,16 @@ def bomb_shortens_path_to_coin(situation,action,after_action):
         bombArea = calculate_bomb_area(x_bomb, y_bomb)
         formerCrates=[i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]
         for i in formerCrates:
-            if walking_closer_to_reachable_coin(situation, [i]):
+            if closer_distance_to_coin(situation, [i]):
                 return True
     return False
+
+def closer_distance_to_coin(situation,after_action):
+    position_new= np.array([after_action[-1][0], after_action[-1][1]])
+    position_old = np.array(situation["self"][-1])
+    for coin in situation["coins"]:
+        if np.linalg.norm(position_old-coin)>np.linalg.norm(position_new-coin):
+            return True
 def bomb_will_destroy_crates(situation,after_action):
     bomb = situation["bombs"][-1]
     x_bomb = bomb[0][0]
@@ -245,11 +253,76 @@ def walking_closer_to_reachable_coin(situation,after_action):
     position_new= np.array([after_action[-1][0], after_action[-1][1]])
     position_old = np.array(situation["self"][-1])
     for coin in situation["coins"]:
-        if np.linalg.norm(position_old-coin)>np.linalg.norm(position_new-coin):
-            return True #TODO not considering Things blocking path yet.
+        path=bfs_find_path(situation, position_old, coin)
+        if path:
+            if all(path[0]==position_new):
+                return True
+    return False
+def no_coin_reachable(situation,after_action):
+    position_new= np.array([after_action[-1][0], after_action[-1][1]])
+    position_old = np.array(situation["self"][-1])
+    for coin in situation["coins"]:
+        path=bfs_find_path(situation, position_old, coin)
+        if path:
+            return False
+    return True
+##################################################################
+def position_is_occupied_or_already_visited(situation,x,y,visited,additionalBlock=[]):
+    if situation["field"][x][y]!=0:
+        return True
+    if visited[x][y]:
+        return True
+    for bomb in situation["bombs"]:
+        x_bomb=bomb[0][0]
+        y_bomb=bomb[0][1]
+        if x==x_bomb:
+            if y==y_bomb:
+                return True
+    for player in situation["others"]:
+        x_player=player[-1][0]
+        y_player=player[-1][1]
+        if x==x_player:
+            if y==y_player:
+                return True #TODO what if two players stand next to each other walking in the same direction?
+    if additionalBlock:
+        for i in additionalBlock:
+            x_i=i[0]
+            y_i=i[1]
+            if x==x_i:
+                if y==y_i:
+                    return True
+    return False
+
+
+def bfs_find_path(situation, start, goal):
+    n = len(situation["field"])
+    directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]  # Right, Down, Left, Up
+    visited = [[False for _ in range(n)] for _ in range(n)]
+    parent = [[None for _ in range(n)] for _ in range(n)]  # Track the path
+
+    queue = deque([start])
+    visited[start[0]][start[1]] = True
+
+    while queue:
+        x, y = queue.popleft()
+        if (x, y) == goal:
+            path = []
+            while parent[x][y] is not None:
+                path.append((x, y))
+                x, y = parent[x][y]
+            return path[::-1]  # Reverse the path
+
+        for dx, dy in directions:
+            nx, ny = x + dx, y + dy
+            if not position_is_occupied_or_already_visited(situation,nx, ny, visited):
+                queue.append((nx, ny))
+                visited[nx][ny] = True
+                parent[nx][ny] = (x, y)
+    return None  # Return None if no path exists
+
 
 def rewrite_round_data(step):
-    playField = step["field"]
+    playField = copy.deepcopy(step["field"])
     for i in step["coins"]:
         playField[i[0]][i[1]]= 10
     selfPlayer=step["self"]
