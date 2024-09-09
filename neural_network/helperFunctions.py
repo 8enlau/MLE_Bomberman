@@ -163,6 +163,8 @@ def action_leads_to_dying(situation,after_action):
         for bomb in bombs:
             if bomb[-1]==0:
                 return True
+    if situation["explosion_map"][x][y]!=0:
+        return True
     return False
 
 def in_scope_of_bomb_after_action(situation,action,after_action):
