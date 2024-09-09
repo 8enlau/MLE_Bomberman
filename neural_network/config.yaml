@@ -2,7 +2,7 @@ networkName: "TRAIN_ThreeConvolutional"
 n_epochs: 20
 p_drop_input: 0.005
 p_drop_hidden: 0.005
-batch_size: 32768
-alpha: 0.5
+batch_size: 2048
+alpha: 0.01
 learningRate: 1e-3
 epsilon: 1e-8
