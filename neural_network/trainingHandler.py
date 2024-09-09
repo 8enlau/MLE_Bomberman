@@ -116,12 +116,6 @@ class handleTraining():
                         inputs.append(torch.tensor([list(col) for col in zip(*newfield)][::-1], dtype=torch.float32).reshape(-1, 17, 17))# 270 degrees
                         labels.append(torch.tensor(turnedResults, dtype=torch.float32))
                         ########################################
-                        if s["step"]==23 and i == 0:
-                            print("Dictionary:", s)
-                            print(newfield)
-                            print(results)
-                            print("############################")
-                            print("aaaaaaaaaaaaaaaaaaaaaaaaaaa")
                         s["others"].append(s["self"])
         print(len(inputs))
         print("Beginning training.")
