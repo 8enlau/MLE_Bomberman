@@ -1,3 +1,4 @@
+import copy
 import importlib
 import sys
 
@@ -14,7 +15,7 @@ def init_weights(shape):
     w.requires_grad = True
     return w
 def rewrite_round_data(step):
-    playField = step["field"]
+    playField = copy.deepcopy(step["field"])
     for i in step["coins"]:
         playField[i[0]][i[1]]= 10
     selfPlayer=step["self"]

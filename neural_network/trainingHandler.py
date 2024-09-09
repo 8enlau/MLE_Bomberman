@@ -12,9 +12,10 @@ from tqdm import tqdm
 from torch.nn.functional import conv2d, max_pool2d, cross_entropy,mse_loss
 import torchvision.transforms as transforms
 import torch
+import multiprocessing
 from rewards import reward
 from helperFunctions import rewrite_round_data
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 class handleTraining():
     def __init__(self,yamlConfig):
         self.networkName =  yamlConfig["networkName"]
@@ -72,13 +73,15 @@ class handleTraining():
         with open("Dataset/" + GamePath,"r") as file:
             file_read = json.load(file)
         readyData = []
+        inputs = []
+        labels = []
         players = copy.deepcopy(file_read[0][0]["others"])
         actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
         for p in players:
             pName = p[0]
             for i in range(len(file_read)):
                 for s in file_read[i]:
-                    playPosition = [i for i in s["others"] if pName in i]
+                    playPosition = [pl for pl in s["others"] if pName in pl]
                     if any(playPosition):
                         s["self"] = s["others"][s["others"].index(playPosition[0])]
                         del s["others"][s["others"].index(playPosition[0])]
@@ -86,28 +89,35 @@ class handleTraining():
                         for a in actions:
                             results.append(reward(s, a))
                         newfield = rewrite_round_data(s)
-                        readyData.append([newfield, results])
+                        inputs.append(torch.tensor(newfield, dtype=torch.float32).reshape(-1, 17, 17))
+                        labels.append(torch.tensor(results, dtype=torch.float32))
                         # Add rotating field here:
                         turnedResults=copy.deepcopy(results)
                         turnedResults[0] = results[2]
                         turnedResults[1] = results[3]
                         turnedResults[2] = results[1]
                         turnedResults[3] = results[0]
-                        readyData.append([[list(reversed(col)) for col in zip(*newfield)], turnedResults]) # 90 degrees
+                        inputs.append(torch.tensor([list(reversed(col)) for col in zip(*newfield)], dtype=torch.float32).reshape(-1, 17, 17))# 90 degrees
+                        labels.append(torch.tensor(turnedResults, dtype=torch.float32))
+                        ############################################
                         turnedResults=copy.deepcopy(results)
                         turnedResults[0] = results[1]
                         turnedResults[1] = results[0]
                         turnedResults[2] = results[3]
                         turnedResults[3] = results[2]
-                        readyData.append([[row[::-1] for row in newfield[::-1]], turnedResults]) # 180 degrees
+                        inputs.append(torch.tensor([row[::-1] for row in newfield[::-1]], dtype=torch.float32).reshape(-1, 17, 17))# 180 degrees
+                        labels.append(torch.tensor(turnedResults, dtype=torch.float32))
+                        ############################################
                         turnedResults=copy.deepcopy(results)
                         turnedResults[0] = results[3]
                         turnedResults[1] = results[2]
                         turnedResults[2] = results[0]
                         turnedResults[3] = results[1]
-                        readyData.append([[list(col) for col in zip(*newfield)][::-1], turnedResults]) # 270 degrees
+                        inputs.append(torch.tensor([list(col) for col in zip(*newfield)][::-1], dtype=torch.float32).reshape(-1, 17, 17))# 270 degrees
+                        labels.append(torch.tensor(turnedResults, dtype=torch.float32))
+                        ########################################
                         s["others"].append(s["self"])
-        print(len(readyData))
+        print(len(inputs))
         print("Beginning training.")
         # Get weights of network:
         try:
@@ -118,29 +128,28 @@ class handleTraining():
         self.weights = []
         for key, item in weights.items():
             self.weights.append(item)
-        
-        # Get data and bring it in the right form
-        torchData = []
-        for i, j in readyData:
-            i = torch.tensor(i, dtype=torch.float32) # TODO does int64 make more sense here?
-            i = i.reshape(-1, 17, 17)
-            j = torch.tensor(j, dtype=torch.float32) # TODO does int64 make more sense here?
-            # j = j.reshape(-1,6)
-            torchData.append([i, j])
-        del readyData
+
+        # Stack inputs and labels
+        inputs = torch.stack(inputs)
+        labels = torch.stack(labels)
+        FullDataset = TensorDataset(inputs, labels)
+        num_workers = multiprocessing.cpu_count()
+        if num_workers>1:
+            num_workers=num_workers-1
+
         train_dataloader = DataLoader(
-            dataset=torchData,
+            dataset=FullDataset,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=1, #TODO maybe more if available?!
+            num_workers=num_workers,
             pin_memory=True,
         )
 
         test_dataloader = DataLoader(
-            dataset=torchData,
+            dataset=FullDataset,
             batch_size=self.batch_size,
             shuffle=False,
-            num_workers=1,
+            num_workers=num_workers,
             pin_memory=True,
         )
         # Next load the model
