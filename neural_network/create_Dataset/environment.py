@@ -509,6 +509,7 @@ class BombeRLeWorld(GenericWorld):
     def print_gameplay(self,args):
         file_name = f'Dataset/{args.dataset_counter}_{args.n_rounds}rounds_ordered.json'
         diction_list=[]
+        sorted_dict=[]
         for i in range(args.n_rounds):
             diction_list.append([])
         for a in self.agents:
@@ -534,10 +535,8 @@ class BombeRLeWorld(GenericWorld):
                 game_round=diction["round"]-1
                 del diction["round"]
                 diction_list[game_round].append(diction)
-
         for i in diction_list:
-            i = sorted(i, key=lambda x: x["step"])
-        #    for j in i:
-         #       del j["step"]
+            sorted_dict.append(sorted(i, key=lambda x: x["step"]))
+
         with open(file_name, "w") as file:
-            json.dump(diction_list, file)
+            json.dump(sorted_dict, file)
