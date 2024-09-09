@@ -156,7 +156,8 @@ class handleTraining():
         module = importlib.import_module(self.networkName + ".networkLayout")
         self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
-        optimizer = RMSprop(params=self.convolution_model.parameters,lr=self.learningRate,alpha=self.alpha,eps=self.epsilon)
+        optimizer = optim.Adam(params=self.convolution_model.parameters,lr=self.learningRate,eps=self.epsilon)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=15, factor=0.1)
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
@@ -211,7 +212,7 @@ class handleTraining():
 
                         incorrect_test += (predicted != y_max_indices).sum().item()
                         total_test += y.size(0)
-
+                    scheduler.step(loss)
                 self.progress["test_loss_convol"].append(torch.mean(torch.tensor(test_loss_this_epoch)))
                 error_rate = incorrect_test / total_test
                 self.progress["test_error_rate"].append(error_rate)
@@ -227,37 +228,6 @@ class handleTraining():
             time.sleep(1)
             torch.save(weights, "create_Dataset/agent_code/" + self.networkName + "/weights.pth")
         return 0
-
-
-class RMSprop(optim.Optimizer):
-    """
-    This is a reduced version of the PyTorch internal RMSprop optimizer
-    It serves here as an example
-    """
-    def __init__(self, params, lr=1e-3, alpha=0.5, eps=1e-8):
-        defaults = dict(lr=lr, alpha=alpha, eps=eps)
-        super(RMSprop, self).__init__(params, defaults)
-
-    def step(self):
-        for group in self.param_groups:
-            for p in group['params']:
-                grad = p.grad.data
-                state = self.state[p]
-
-                # state initialization
-                if len(state) == 0:
-                    state['square_avg'] = torch.zeros_like(p.data)
-
-                square_avg = state['square_avg']
-                alpha = group['alpha']
-
-                # update running averages
-                square_avg.mul_(alpha).addcmul_(grad, grad, value=1 - alpha)
-                avg = square_avg.sqrt().add_(group['eps'])
-
-                # gradient update
-                p.data.addcdiv_(grad, avg, value=-group['lr'])
-
 
 
 if __name__=="__main__":
