@@ -266,4 +266,5 @@ if __name__=="__main__":
     test= handleTraining(config)
     test.ExecuteFullTraining()
    # test.playGames()
-    #test.prepareGames()
+   # test.prepareGames()
+
