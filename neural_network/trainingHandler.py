@@ -29,9 +29,6 @@ class handleTraining():
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
 
-
-        with open("create_Dataset/config.yaml", 'r') as file:
-            self.Datasetconfig = yaml.load(file,Loader=yaml.FullLoader)
         module = importlib.import_module("create_Dataset.main")
         self.DatasetMain = getattr(module, 'mainFunction')
 
@@ -58,7 +55,9 @@ class handleTraining():
 
 
     def playGames(self):
-        self.DatasetMain(self.Datasetconfig,self.networkName,)
+        with open("create_Dataset/config.yaml", 'r') as file:
+            self.Datasetconfig = yaml.load(file,Loader=yaml.FullLoader)
+        self.DatasetMain(self.Datasetconfig,self.networkName)
 
     def prepareGames(self):
         GameFiles= os.listdir("Dataset")
@@ -233,7 +232,7 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-  #  test.ExecuteFullTraining()
+    test.ExecuteFullTraining()
    # test.playGames()
-    test.prepareGames()
+   # test.prepareGames()
 
