@@ -334,14 +334,20 @@ def bfs_find_path(situation, start, goal):
 def rewrite_round_data(step):
     playField = copy.deepcopy(step["field"])
     for i in step["coins"]:
+        if playField[i[0]][i[1]] == -1:
+            sys.exit(-1,"COIN FIELD ALREADY BLOCKED")
         playField[i[0]][i[1]]= 10
     selfPlayer=step["self"]
     playField[selfPlayer[3][0]][selfPlayer[3][1]]=5+int(selfPlayer[2])*5/10
     for i in step["others"]:
+        if playField[i[3][0]][i[3][1]] == -1:
+            sys.exit(-1,"PLAYER FIELD ALREADY BLOCKED")
         playField[i[3][0]][i[3][1]]=2+int(i[2])*5/10
     for i in step["bombs"]:
         k=i[0][0]
         l=i[0][1]
+        if playField[k][l] == -1:
+            sys.exit(-1,"BOMB FIELD ALREADY BLOCKED")
         if i[1]==3:
             playField[k][l]=-playField[k][l]
         else:
