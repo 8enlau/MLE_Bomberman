@@ -122,9 +122,11 @@ def position_is_occupied(situation,x,y,additionalBlock=[]):
                     return True
     return False
 
-def player_escapes_bomb(situation,bomb,player,additionalBlock=[]):
+def player_escapes_bomb(situation,bomb,player,additionalBlock=[],increaseTimer=False):
     playerPosition=(player[-1][0],player[-1][1])
     timer = bomb[1]
+    if increaseTimer:
+        timer += 1
     return(find_path(playerPosition,timer,bomb,situation,additionalBlock))
 
 
