@@ -178,10 +178,13 @@ def in_scope_of_bomb_after_action(situation,action,after_action):
     return in_line_of_bomb(situation,after_action)
 
 def cannot_escape_after_action(situation,action,after_action,bombs):
-    boolList=[]
     for bomb in bombs:
-        boolList.append(player_escapes_bomb(situation,bomb,after_action))
-    return (not all(boolList))
+        if action == "BOMB":
+            if not player_escapes_bomb(situation, bomb, after_action,increaseTimer=True):
+                return True
+        else:
+            if not player_escapes_bomb(situation,bomb,after_action):
+                return True
     return False
 
 
