@@ -249,7 +249,8 @@ def action_leads_to_dying_opponent(situation,action,after_action):
     for bomb in situation["bombs"]:
         for player in situation["others"]:
             if not player_escapes_bomb(situation,bomb,player,playerPosition):
-                return True
+                if player_escapes_bomb(situation,bomb,player):
+                    return True
     return False
 
 def collecting_coin(situation,action,after_action):
