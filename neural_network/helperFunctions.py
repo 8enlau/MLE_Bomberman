@@ -168,7 +168,7 @@ def action_leads_to_dying(situation,after_action):
     bombs = in_line_of_bomb(situation,after_action)
     if bombs:
         for bomb in bombs:
-            if bomb[-1]==1:
+            if bomb[-1]==0:
                 return True
     if situation["explosion_map"][x][y]!=0:
         return True
