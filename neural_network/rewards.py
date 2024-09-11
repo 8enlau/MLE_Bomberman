@@ -52,7 +52,9 @@ def reward(situationDictionary,action):
         possible_reward +=1
     if no_coin_reachable(situation,after_action):
         if closer_distance_to_coin(situation, after_action):
-            possible_reward +=0.5
+            possible_reward +=0.1
+        else:
+            possible_reward -=0.05
     return possible_reward
 
 
