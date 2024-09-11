@@ -36,7 +36,7 @@ def rewrite_round_data(step):
         for index2,j in enumerate(i):
             if j==1:
                 playField[index1][index2]=-20
-    return(playField)
+    return([list(row) for row in zip(*playField)])
 def rectify(x):
     # Rectified Linear Unit (ReLU)
     return torch.max(torch.zeros_like(x), x)
