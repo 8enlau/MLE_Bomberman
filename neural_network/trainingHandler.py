@@ -91,7 +91,7 @@ class handleTraining():
                         inputs.append(torch.tensor(newfield, dtype=torch.float32).reshape(-1, 17, 17))
                         labels.append(torch.tensor(results, dtype=torch.float32))
                         # Add rotating field here:
-                        turnedResults=copy.deepcopy(results)
+                        turnedResults = copy.deepcopy(results)
                         turnedResults[0] = results[2]
                         turnedResults[1] = results[3]
                         turnedResults[2] = results[1]
@@ -99,22 +99,25 @@ class handleTraining():
                         inputs.append(torch.tensor([list(reversed(col)) for col in zip(*newfield)], dtype=torch.float32).reshape(-1, 17, 17))# 90 degrees
                         labels.append(torch.tensor(turnedResults, dtype=torch.float32))
                         ############################################
-                        turnedResults=copy.deepcopy(results)
+                        turnedResults = copy.deepcopy(results)
                         turnedResults[0] = results[1]
                         turnedResults[1] = results[0]
                         turnedResults[2] = results[3]
                         turnedResults[3] = results[2]
-                        inputs.append(torch.tensor([row[::-1] for row in newfield[::-1]], dtype=torch.float32).reshape(-1, 17, 17))# 180 degrees
+                        inputs.append(torch.tensor([row[::-1] for row in newfield[::-1]], dtype=torch.float32).reshape(-1, 17,
+                                                                                                             17))  # 180 degrees
                         labels.append(torch.tensor(turnedResults, dtype=torch.float32))
                         ############################################
-                        turnedResults=copy.deepcopy(results)
+                        turnedResults = copy.deepcopy(results)
                         turnedResults[0] = results[3]
                         turnedResults[1] = results[2]
                         turnedResults[2] = results[0]
                         turnedResults[3] = results[1]
-                        inputs.append(torch.tensor([list(col) for col in zip(*newfield)][::-1], dtype=torch.float32).reshape(-1, 17, 17))# 270 degrees
+                        inputs.append(
+                            torch.tensor([list(col) for col in zip(*newfield)][::-1], dtype=torch.float32).reshape(
+                                -1, 17, 17))  # 270 degrees
                         labels.append(torch.tensor(turnedResults, dtype=torch.float32))
-                        ########################################
+
                         s["others"].append(s["self"])
         print(len(inputs))
         print("Beginning training.")
