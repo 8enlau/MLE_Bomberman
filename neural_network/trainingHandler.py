@@ -49,7 +49,7 @@ class handleTraining():
         self.playGames()
         self.prepareGames()
 
-        while self.progress["train_error_rate"][-1]>0.01:
+        while self.progress["train_loss_convol"][-1]>0.001:
             self.playGames()
             self.prepareGames()
 
@@ -159,7 +159,7 @@ class handleTraining():
         self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
         optimizer = optim.Adam(params=self.convolution_model.parameters,lr=self.learningRate,eps=self.epsilon)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=15, factor=0.1)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.1)
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
