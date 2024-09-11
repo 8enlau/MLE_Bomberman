@@ -136,7 +136,7 @@ def find_path(position,timer,bomb,situation,additionalBlock):
     y=position[1]
     neighbours=[(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
     freeNeighbours=[i for i in neighbours if not position_is_occupied(situation,i[0],i[1],additionalBlock)]
-    if timer >= 0:
+    if timer >= 1:
         timer -= 1
         for i in freeNeighbours:
             nextPath=find_path(i,timer,bomb,situation,additionalBlock)
@@ -166,7 +166,7 @@ def action_leads_to_dying(situation,after_action):
     bombs = in_line_of_bomb(situation,after_action)
     if bombs:
         for bomb in bombs:
-            if bomb[-1]==0:
+            if bomb[-1]==1:
                 return True
     if situation["explosion_map"][x][y]!=0:
         return True
