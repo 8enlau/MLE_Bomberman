@@ -3,15 +3,19 @@ import copy
 from collections import deque
 
 def position_after_step(situation,action):
-    after_action=copy.deepcopy(situation["self"])
+    after_action = []
+    for i in range(len(situation["self"]) -1 ):
+        after_action.append(situation["self"][i])
+    pos = [situation["self"][-1][0],situation["self"][-1][1]]
+    after_action.append(pos)
     if action == "UP":
-        after_action[-1][0] -= 1
-    elif action == "DOWN":
-        after_action[-1][0] += 1
-    elif action =="LEFT":
         after_action[-1][1] -= 1
-    elif action =="RIGHT":
+    elif action == "DOWN":
         after_action[-1][1] += 1
+    elif action =="LEFT":
+        after_action[-1][0] -= 1
+    elif action =="RIGHT":
+        after_action[-1][0] += 1
     elif action == "BOMB":
         situation["bombs"].append([after_action[-1],3])
     elif action == "WAIT":
