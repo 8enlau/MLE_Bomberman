@@ -1,6 +1,6 @@
 import copy
 import json
-from helperFunctions import (action_not_possible,action_leads_to_suicide,action_leads_to_dying,
+from helperFunctions import (action_not_possible,action_leads_to_dying,
                              in_scope_of_bomb_after_action,cannot_escape_after_action,
                              bomb_will_kill_opponent, bomb_might_kill_opponent, bomb_shortens_path_to_coin,
                              bomb_will_destroy_crates, action_leads_to_dying_opponent,
@@ -16,16 +16,16 @@ def reward(situationDictionary,action):
         return -8
 
     ### Action leads to Dying
-    if action_leads_to_suicide(situation,action,after_action): # For example blocking self in bomb
-        return -4
     if action_leads_to_dying(situation,after_action):
-        return -4
+        return -5
 
     ### Being close to a bomb
     # Walking where a bomb will explode soon:
     bombs=in_scope_of_bomb_after_action(situation,action,after_action)
     if bombs:
         if cannot_escape_after_action(situation,action,after_action,bombs):
+            if action == "WAIT":
+                return -5
             return -4
 
 
