@@ -3,8 +3,6 @@ from torch.nn.functional import conv2d, max_pool2d, cross_entropy
 import numpy as np
 import numpy as np
 import torch.nn as nn
-
-
 from torch.nn.functional import conv2d, max_pool2d
 
 def rewrite_round_data(step):
