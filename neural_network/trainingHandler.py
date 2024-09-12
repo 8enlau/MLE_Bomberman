@@ -184,8 +184,8 @@ class handleTraining():
 
                 # Error rate calculation
                 predicted = torch.argmax(noise_py_x, 1)
-                _, y_max_indices = torch.max(y, 1)
-                incorrect_train += (y.gather(1, predicted.unsqueeze(1)).squeeze(1) != y_max_indices).sum().item()
+                y_max,_ = torch.max(y, 1)
+                incorrect_train += (y.gather(1, predicted.unsqueeze(1)).squeeze(1) != y_max).sum().item()
                 total_train += y.size(0)
 
             self.progress["train_loss_convol"].append(torch.mean(torch.tensor(train_loss_this_epoch)))
@@ -209,9 +209,9 @@ class handleTraining():
                         test_loss_this_epoch.append(float(loss))
 
                         predicted = torch.argmax(noise_py_x, 1)
-                        _, y_max_indices = torch.max(y, 1)
+                        y_max , _ = torch.max(y, 1)
 
-                        incorrect_test += (y.gather(1, predicted.unsqueeze(1)).squeeze(1) != y_max_indices).sum().item()
+                        incorrect_test += (y.gather(1, predicted.unsqueeze(1)).squeeze(1) != y_max).sum().item()
                         total_test += y.size(0)
                     scheduler.step(loss)
                 self.progress["test_loss_convol"].append(torch.mean(torch.tensor(test_loss_this_epoch)))
@@ -235,7 +235,7 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-    test.ExecuteFullTraining()
+   # test.ExecuteFullTraining()
    # test.playGames()
-   # test.prepareGames()
+    test.prepareGames()
 
