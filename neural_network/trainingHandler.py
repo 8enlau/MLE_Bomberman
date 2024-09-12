@@ -236,7 +236,7 @@ if __name__=="__main__":
     with open("config.yaml", 'r') as file:
         config = yaml.safe_load(file)
     test= handleTraining(config)
-   # test.ExecuteFullTraining()
+    test.ExecuteFullTraining()
    # test.playGames()
-    test.prepareGames()
+    #test.prepareGames()
 
