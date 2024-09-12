@@ -4,6 +4,7 @@ import numpy as np
 import numpy as np
 import torch.nn as nn
 from torch.nn.functional import conv2d, max_pool2d
+import copy
 
 def rewrite_round_data(step):
     playField = copy.deepcopy(step["field"])
