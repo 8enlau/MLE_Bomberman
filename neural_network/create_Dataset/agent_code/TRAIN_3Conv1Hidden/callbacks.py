@@ -14,6 +14,7 @@ def init_weights(shape):
     w = torch.randn(size=shape) * std
     w.requires_grad = True
     return w
+
 def rewrite_round_data(step):
     playField = copy.deepcopy(step["field"])
     for i in step["coins"]:
@@ -48,7 +49,7 @@ def convolution_model(X, w_conv1, w_conv2,w_conv3, w_h1, w_o):
     subsampling_layer2 = max_pool2d(conv2, (2, 2))  # subsampling on convolutional layer 2
     conv3 = rectify(conv2d(subsampling_layer2,w_conv3,padding=1))
 
-    subsampling_layer3 = max_pool2d(conv3, (2, 2))  # subsampling on convolutional layer 2
+    subsampling_layer3 = max_pool2d(conv3, (2, 2))  # subsampling on convolutional layer 3
     conv_out3 = subsampling_layer3.reshape(batch_size, -1)
     h1 = rectify(conv_out3 @ w_h1)  # Layer 1 out
     pre_softmax = h1 @ w_o  # Layer 2 out (FINAL)
