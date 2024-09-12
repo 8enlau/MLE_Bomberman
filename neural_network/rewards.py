@@ -6,7 +6,7 @@ from helperFunctions import (action_not_possible,action_leads_to_suicide,action_
                              bomb_will_destroy_crates, action_leads_to_dying_opponent,
                              collecting_coin,position_after_step,
                              walking_closer_to_reachable_coin,
-                             rewrite_round_data,no_coin_reachable,closer_distance_to_coin)
+                             no_coin_reachable,closer_distance_to_coin)
 #TODO IMPORTANT! remove ALL bombs added to the dictionary after all computtations. Don't add any in the best case.
 def reward(situationDictionary,action):
     situation = copy.deepcopy(situationDictionary)
@@ -59,7 +59,8 @@ def reward(situationDictionary,action):
 
 
 if __name__=="__main__":
-    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/19_4rounds_ordered.json", "r") as file:
+    from TRAIN_3Conv1Hidden.networkLayout import rewrite_round_data
+    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/1_5rounds_ordered.json", "r") as file:
         file_read = json.load(file)
     readyData=[]
 
