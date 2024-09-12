@@ -20,23 +20,37 @@ def rewrite_round_data(step):
     for i in step["coins"]:
         playField[i[0]][i[1]]= 10
     selfPlayer=step["self"]
-    playField[selfPlayer[3][0]][selfPlayer[3][1]]=5+int(selfPlayer[2])*5/10
+    if selfPlayer[2]:
+        playField[selfPlayer[3][0]][selfPlayer[3][1]] = 6
+    else:
+        playField[selfPlayer[3][0]][selfPlayer[3][1]] = 5
     for i in step["others"]:
         playField[i[3][0]][i[3][1]]=2+int(i[2])*5/10
     for i in step["bombs"]:
         k=i[0][0]
         l=i[0][1]
         if i[1]==3:
-            playField[k][l]=-playField[k][l]
-        else:
-            if playField[k][l]>1:
-                playField[k][l] = -(playField[k][l]+(9-i[1])/10)
+            if playField[k][l]>=4:
+                playField[k][l]=4
             else:
-                playField[k][l]=-(19-i[1])
+                playField[k][l] = 0.5
+        elif i[1]==2:
+            if playField[k][l]>=4:
+                playField[k][l] *= 0.1
+            else:
+                playField[k][l]=-((9 - i[1])-playField[k][l])
+        elif i[1] == 1:
+            if playField[k][l] > 0:
+                playField[k][l] *= -1
+            else:
+                playField[k][l] = -((9 - i[1])-playField[k][l])
+        else:
+            playField[k][l] = -((9 - i[1]) - playField[k][l])
+
     for index1,i in enumerate(step["explosion_map"]):
         for index2,j in enumerate(i):
             if j==1:
-                playField[index1][index2]=-20
+                playField[index1][index2]=-10
     return([list(row) for row in zip(*playField)])
 def rectify(x):
     # Rectified Linear Unit (ReLU)
