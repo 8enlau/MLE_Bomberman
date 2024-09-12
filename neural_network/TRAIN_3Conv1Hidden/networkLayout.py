@@ -3,11 +3,47 @@ from torch.nn.functional import conv2d, max_pool2d, cross_entropy
 import numpy as np
 import numpy as np
 import torch.nn as nn
-
+import copy
 
 from torch.nn.functional import conv2d, max_pool2d
 
+def rewrite_round_data(step):
+    playField = copy.deepcopy(step["field"])
+    for i in step["coins"]:
+        playField[i[0]][i[1]]= 10
+    selfPlayer=step["self"]
+    if selfPlayer[2]:
+        playField[selfPlayer[3][0]][selfPlayer[3][1]] = 6
+    else:
+        playField[selfPlayer[3][0]][selfPlayer[3][1]] = 5
+    for i in step["others"]:
+        playField[i[3][0]][i[3][1]]=2+int(i[2])*5/10
+    for i in step["bombs"]:
+        k=i[0][0]
+        l=i[0][1]
+        if i[1]==3:
+            if playField[k][l]>=4:
+                playField[k][l]=4
+            else:
+                playField[k][l] = 0.5
+        elif i[1]==2:
+            if playField[k][l]>=4:
+                playField[k][l] *= 0.1
+            else:
+                playField[k][l]=-((9 - i[1])-playField[k][l])
+        elif i[1] == 1:
+            if playField[k][l] > 0:
+                playField[k][l] *= -1
+            else:
+                playField[k][l] = -((9 - i[1])-playField[k][l])
+        else:
+            playField[k][l] = -((9 - i[1]) - playField[k][l])
 
+    for index1,i in enumerate(step["explosion_map"]):
+        for index2,j in enumerate(i):
+            if j==1:
+                playField[index1][index2]=-10
+    return([list(row) for row in zip(*playField)])
 def rectify(x):
     # Rectified Linear Unit (ReLU)
     return torch.max(torch.zeros_like(x), x)
@@ -35,9 +71,24 @@ class NN_model(nn.Module):
         h1 = rectify(conv_out3 @ self.w_h1)  # Layer 1 out
         pre_softmax = h1 @ self.w_o  # Layer 2 out (FINAL)
         return pre_softmax
+class PrepareData:
+    def __init__(self):
+        self.rewriteData = rewrite_round_data
 
+    def prepareBasic(self,Data):
+        return(self.rewriteData(Data))
 
-def testing():
+    def turn_90Degrees(self,Data,label):
+        turnedResults = [label[2],
+                         label[3],
+                         label[1],
+                         label[0],
+                         label[4],
+                         label[5]]
+        turnedField = [list(reversed(col)) for col in zip(*Data)]
+        return(turnedField,turnedResults)
+
+if __name__ == "__main__":
     X=torch.tensor([[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
           [-1, -4.5, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, -3.5, -1],
           [-1, 0, -1, 0, -1, 1, -1, 1, -1, 1, -1, 0, -1, 1, -1, 0, -1],
