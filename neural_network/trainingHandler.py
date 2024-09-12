@@ -14,7 +14,6 @@ import torchvision.transforms as transforms
 import torch
 import multiprocessing
 from rewards import reward
-from helperFunctions import rewrite_round_data
 from torch.utils.data import DataLoader, TensorDataset
 class handleTraining():
     def __init__(self,yamlConfig):
@@ -28,6 +27,9 @@ class handleTraining():
         self.epsilon = float(yamlConfig["epsilon"])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
+
+        self.module = importlib.import_module(self.networkName + ".networkLayout")
+        self.DataFormat = getattr(self.module, 'PrepareData')()
 
         module = importlib.import_module("create_Dataset.main")
         self.DatasetMain = getattr(module, 'mainFunction')
@@ -88,37 +90,14 @@ class handleTraining():
                         results = []
                         for a in actions:
                             results.append(reward(s, a))
-                        newfield = rewrite_round_data(s)
+                        newfield = self.DataFormat.prepareBasic(s)
                         inputs.append(torch.tensor(newfield, dtype=torch.float32).reshape(-1, 17, 17))
                         labels.append(torch.tensor(results, dtype=torch.float32))
                         # Add rotating field here:
-                        turnedResults = copy.deepcopy(results)
-                        turnedResults[0] = results[2]
-                        turnedResults[1] = results[3]
-                        turnedResults[2] = results[1]
-                        turnedResults[3] = results[0]
-                        inputs.append(torch.tensor([list(reversed(col)) for col in zip(*newfield)], dtype=torch.float32).reshape(-1, 17, 17))# 90 degrees
-                        labels.append(torch.tensor(turnedResults, dtype=torch.float32))
-                        ############################################
-                        turnedResults = copy.deepcopy(results)
-                        turnedResults[0] = results[1]
-                        turnedResults[1] = results[0]
-                        turnedResults[2] = results[3]
-                        turnedResults[3] = results[2]
-                        inputs.append(torch.tensor([row[::-1] for row in newfield[::-1]], dtype=torch.float32).reshape(-1, 17,
-                                                                                                             17))  # 180 degrees
-                        labels.append(torch.tensor(turnedResults, dtype=torch.float32))
-                        ############################################
-                        turnedResults = copy.deepcopy(results)
-                        turnedResults[0] = results[3]
-                        turnedResults[1] = results[2]
-                        turnedResults[2] = results[0]
-                        turnedResults[3] = results[1]
-                        inputs.append(
-                            torch.tensor([list(col) for col in zip(*newfield)][::-1], dtype=torch.float32).reshape(
-                                -1, 17, 17))  # 270 degrees
-                        labels.append(torch.tensor(turnedResults, dtype=torch.float32))
-
+                        for i in range(3):
+                            newfield,results = self.DataFormat.turn_90Degrees(newfield,results)
+                            inputs.append(torch.tensor(newfield, dtype=torch.float32).reshape(-1, 17, 17))
+                            labels.append(torch.tensor(results, dtype=torch.float32))
                         s["others"].append(s["self"])
         print(len(inputs))
         print("Beginning training.")
@@ -156,8 +135,7 @@ class handleTraining():
             pin_memory=True,
         )
         # Next load the model
-        module = importlib.import_module(self.networkName + ".networkLayout")
-        self.convolution_model = getattr(module, 'NN_model')(self.weights).to(self.device)
+        self.convolution_model = getattr(self.module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
         optimizer = optim.Adam(params=self.convolution_model.parameters,lr=self.learningRate,eps=self.epsilon)
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.1)

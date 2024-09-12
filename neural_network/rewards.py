@@ -1,12 +1,12 @@
 import copy
 import json
-from helperFunctions import (action_not_possible,action_leads_to_suicide,action_leads_to_dying,
+from helperFunctions import (action_not_possible,action_leads_to_dying,
                              in_scope_of_bomb_after_action,cannot_escape_after_action,
                              bomb_will_kill_opponent, bomb_might_kill_opponent, bomb_shortens_path_to_coin,
                              bomb_will_destroy_crates, action_leads_to_dying_opponent,
                              collecting_coin,position_after_step,
                              walking_closer_to_reachable_coin,
-                             rewrite_round_data,no_coin_reachable,closer_distance_to_coin)
+                             no_coin_reachable,closer_distance_to_coin)
 #TODO IMPORTANT! remove ALL bombs added to the dictionary after all computtations. Don't add any in the best case.
 def reward(situationDictionary,action):
     situation = copy.deepcopy(situationDictionary)
@@ -16,16 +16,16 @@ def reward(situationDictionary,action):
         return -8
 
     ### Action leads to Dying
-    if action_leads_to_suicide(situation,action,after_action): # For example blocking self in bomb
-        return -4
     if action_leads_to_dying(situation,after_action):
-        return -4
+        return -5
 
     ### Being close to a bomb
     # Walking where a bomb will explode soon:
     bombs=in_scope_of_bomb_after_action(situation,action,after_action)
     if bombs:
         if cannot_escape_after_action(situation,action,after_action,bombs):
+            if action == "WAIT":
+                return -5
             return -4
 
 
@@ -59,7 +59,8 @@ def reward(situationDictionary,action):
 
 
 if __name__=="__main__":
-    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/19_4rounds_ordered.json", "r") as file:
+    from TRAIN_3Conv1Hidden.networkLayout import rewrite_round_data
+    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/1_5rounds_ordered.json", "r") as file:
         file_read = json.load(file)
     readyData=[]
 

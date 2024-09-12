@@ -3,8 +3,6 @@ from torch.nn.functional import conv2d, max_pool2d, cross_entropy
 import numpy as np
 import numpy as np
 import torch.nn as nn
-import copy
-
 from torch.nn.functional import conv2d, max_pool2d
 
 def rewrite_round_data(step):
@@ -44,6 +42,7 @@ def rewrite_round_data(step):
             if j==1:
                 playField[index1][index2]=-10
     return([list(row) for row in zip(*playField)])
+
 def rectify(x):
     # Rectified Linear Unit (ReLU)
     return torch.max(torch.zeros_like(x), x)
@@ -63,14 +62,14 @@ class NN_model(nn.Module):
     def forward(self,X, p_drop_input, p_drop_hidden):
         batch_size = X.shape[0]
         conv1 = rectify(conv2d(X, self.w_conv1, padding=1))  # convolutional layer 1 out
-        conv2 = rectify(conv2d(conv1, self.w_conv2, padding=1))  # convolutional layer 2 out
-        subsampling_layer2 = max_pool2d(conv2, (2, 2))  # subsampling on convolutional layer 2
-        conv3 = rectify(conv2d(subsampling_layer2, self.w_conv3, padding=1))
+        conv2 = rectify(conv2d(conv1, self.w_conv2))  # convolutional layer 2 out
+        conv3 = rectify(conv2d(conv2, self.w_conv3))
         subsampling_layer3 = max_pool2d(conv3, (2, 2))  # subsampling on convolutional layer 2
         conv_out3 = subsampling_layer3.reshape(batch_size, -1)
         h1 = rectify(conv_out3 @ self.w_h1)  # Layer 1 out
         pre_softmax = h1 @ self.w_o  # Layer 2 out (FINAL)
         return pre_softmax
+
 class PrepareData:
     def __init__(self):
         self.rewriteData = rewrite_round_data
@@ -88,7 +87,10 @@ class PrepareData:
         turnedField = [list(reversed(col)) for col in zip(*Data)]
         return(turnedField,turnedResults)
 
-if __name__ == "__main__":
+
+
+
+if __name__=="__main__":
     X=torch.tensor([[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
           [-1, -4.5, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, -3.5, -1],
           [-1, 0, -1, 0, -1, 1, -1, 1, -1, 1, -1, 0, -1, 1, -1, 0, -1],
@@ -118,10 +120,10 @@ if __name__ == "__main__":
     weights = {}
     weights["w_conv1"] = init_weights((32, 1, 3, 3))
     weights["w_conv2"] = init_weights((64, 32, 3, 3))
-    weights["w_conv3"] = init_weights((128, 64, 3, 3))
+    weights["w_conv3"] = init_weights((64, 64, 3, 3))
 
     # hidden layer with 2048 input and 256 output neurons
-    weights["w_h1"] = init_weights((2048, 128))
+    weights["w_h1"] = init_weights((2304, 128))
     weights["w_o"] = init_weights((128, 6))
     w_conv1 = weights["w_conv1"]
     w_conv2 = weights["w_conv2"]
