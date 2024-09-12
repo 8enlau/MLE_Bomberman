@@ -160,8 +160,6 @@ def action_not_possible(situation,action,after_action):
     y=after_action[-1][1]
     return position_is_occupied(situation,x,y)
 
-def action_leads_to_suicide(situation,action,after_action): #TODO I don't really know what this is for. Is it neccessary?
-    return False
 def action_leads_to_dying(situation,after_action):
     x=after_action[-1][0]
     y=after_action[-1][1]
@@ -179,7 +177,7 @@ def in_scope_of_bomb_after_action(situation,action,after_action):
 
 def cannot_escape_after_action(situation,action,after_action,bombs):
     for bomb in bombs:
-        if action == "BOMB":
+        if action == "BOMB" and list(situation["self"][-1])==list(bomb[0]):
             if not player_escapes_bomb(situation, bomb, after_action,increaseTimer=True):
                 return True
         else:
@@ -219,11 +217,16 @@ def bomb_shortens_path_to_coin(situation,action,after_action):
     return False
 
 def closer_distance_to_coin(situation,after_action):
-    position_new= np.array([after_action[-1][0], after_action[-1][1]])
-    position_old = np.array(situation["self"][-1])
-    for coin in situation["coins"]:
+    if situation["coins"]:
+        position_new= np.array([after_action[-1][0], after_action[-1][1]])
+        position_old = np.array(situation["self"][-1])
+        coinDistances=[]
+        for coin in situation["coins"]:
+            coinDistances.append(np.linalg.norm(position_old-coin))
+        coin = situation["coins"][coinDistances.index(min(coinDistances))]
         if np.linalg.norm(position_old-coin)>np.linalg.norm(position_new-coin):
             return True
+    return False
 def bomb_will_destroy_crates(situation,after_action):
     bomb = situation["bombs"][-1]
     x_bomb = bomb[0][0]
@@ -254,25 +257,30 @@ def action_leads_to_dying_opponent(situation,action,after_action):
     return False
 
 def collecting_coin(situation,action,after_action):
-    position= np.array([after_action[-1][0], after_action[-1][1]])
+    position= [after_action[-1][0], after_action[-1][1]]
     for coin in situation["coins"]:
-        if all(np.array(coin) == position):
+        if list(coin) == position:
             return True
 
 def walking_closer_to_reachable_coin(situation,after_action):
-    position_new= np.array([after_action[-1][0], after_action[-1][1]])
+    position_new= [after_action[-1][0], after_action[-1][1]]
     position_old = np.array(situation["self"][-1])
+    shortest_path=25
+    bestAction=None
     for coin in situation["coins"]:
-        path=bfs_find_path(situation, position_old, coin)
+        path=bfs_find_path(situation, position_old, list(coin))
         if path:
-            if all(path[0]==position_new):
-                return True
+            if len(path)<shortest_path:
+                shortest_path=len(path)
+                bestAction=path[0]
+    if bestAction==position_new:
+        return True
     return False
 def no_coin_reachable(situation,after_action):
     position_new= np.array([after_action[-1][0], after_action[-1][1]])
     position_old = np.array(situation["self"][-1])
     for coin in situation["coins"]:
-        path=bfs_find_path(situation, position_old, coin)
+        path=bfs_find_path(situation, position_old, list(coin))
         if path:
             return False
     return True
@@ -318,7 +326,7 @@ def bfs_find_path(situation, start, goal):
         if [x, y] == goal:
             path = []
             while parent[x][y] is not None:
-                path.append((x, y))
+                path.append([x, y])
                 x, y = parent[x][y]
             return path[::-1]  # Reverse the path
 
@@ -341,28 +349,28 @@ if __name__=="__main__":
                  'field': np.array([[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
                                     [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1],
                                     [-1, 0, -1, 0, -1, 1, -1, 0, -1, 1, -1, 0, -1, 0, -1, 0, -1],
-                                    [-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, -1],
-                                    [-1, 0, -1, 0, -1, 0, -1, 0, -1, 0, -1, 1, -1, 1, -1, 0, -1],
-                                    [-1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, -1],
+                                    [-1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, -1],
+                                    [-1, 0, -1, 0, -1, 0, -1, 0, -1, 0, -1, 0, -1, 1, -1, 0, -1],
+                                    [-1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, -1],
                                     [-1, 0, -1, 1, -1, 0, -1, 0, -1, 1, -1, 1, -1, 1, -1, 1, -1],
                                     [-1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, -1],
                                     [-1, 1, -1, 1, -1, 1, -1, 1, -1, 0, -1, 0, -1, 0, -1, 1, -1],
                                     [-1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, -1],
-                                    [-1, 0, -1, 1, -1, 0, -1, 0, -1, 1, -1, 1, -1, 1, -1, 1, -1],
-                                    [-1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 1, -1],
+                                    [-1, 0, -1, 1, -1, 1, -1, 0, -1, 1, -1, 1, -1, 1, -1, 1, -1],
+                                    [-1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1, -1],
                                     [-1, 0, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 0, -1],
                                     [-1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, -1],
                                     [-1, 0, -1, 0, -1, 1, -1, 1, -1, 0, -1, 0, -1, 1, -1, 0, -1],
                                     [-1, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, -1],
                                     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]]),
-                 'self': ('DET_Rewards', 0, False, (np.int64(3), np.int64(12))),
+                 'self': ('DET_Rewards', 0, False, (np.int64(11), np.int64(2))),
 
                  'others': [('rule_based_agent_0', 1, False, (np.int64(2), np.int64(13))),
                             ('rule_based_agent_1', 0, False, (np.int64(15), np.int64(15))),
                             ('rule_based_agent_2', 0, False, (np.int64(5), np.int64(14)))],
-                 'bombs': [((np.int64(3), np.int64(15)), 1),
-                           ((np.int64(2), np.int64(14)), 2)],
-                 'coins': [],
+                 'bombs': [((np.int64(11), np.int64(1)), 1),
+                           ((np.int64(12), np.int64(14)), 2)],
+                 'coins': [(11,5),(10,2),(11,1)],
                  'user_input': None,
                  'explosion_map': np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
                                              0.],
@@ -400,11 +408,16 @@ if __name__=="__main__":
                                              0.]])}
 
     bomb = situation["bombs"][0]
-    after_action = ['DET_Rewards', 0, False, [3,12]]
+    after_action = ['DET_Rewards', 0, False, [11,3]]
 
-    print(cannot_escape_after_action(situation, "DOWN", after_action, situation["bombs"]))
-    print(in_scope_of_bomb_after_action(situation,"DOWN",after_action))
-    if in_scope_of_bomb_after_action(situation,"DOWN",after_action):
+    print(cannot_escape_after_action(situation, "BOMB", after_action, situation["bombs"]))
+    print(in_scope_of_bomb_after_action(situation,"BOMB",after_action))
+    if in_scope_of_bomb_after_action(situation,"BOMB",after_action):
         print("Happening")
     print(action_leads_to_dying(situation,after_action))
+
+    print("COINS")
+    print(no_coin_reachable(situation,after_action))
+    print(walking_closer_to_reachable_coin(situation,after_action))
+    print(closer_distance_to_coin(situation,after_action))
 
