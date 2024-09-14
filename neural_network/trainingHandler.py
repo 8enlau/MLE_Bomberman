@@ -46,6 +46,19 @@ class handleTraining():
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5,), std=(0.5,))
             ])
+        try:
+            weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
+        except:
+            self.playGames()
+            weights = torch.load("create_Dataset/agent_code/" + self.networkName + "/weights.pth",weights_only=True)
+        self.weights = []
+        for key, item in weights.items():
+            self.weights.append(item)
+
+        self.convolution_model = getattr(self.module, 'NN_model')(self.weights).to(self.device)
+        # Now start optimizing
+        self.optimizer = optim.Adam(params=self.convolution_model.parameters,lr=self.learningRate,eps=self.epsilon)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=10, factor=0.1)
 
     def ExecuteFullTraining(self):
         self.playGames()
@@ -135,10 +148,7 @@ class handleTraining():
             pin_memory=True,
         )
         # Next load the model
-        self.convolution_model = getattr(self.module, 'NN_model')(self.weights).to(self.device)
-        # Now start optimizing
-        optimizer = optim.Adam(params=self.convolution_model.parameters,lr=self.learningRate,eps=self.epsilon)
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=10, factor=0.1)
+
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
             incorrect_train = 0
@@ -150,7 +160,7 @@ class handleTraining():
                 # feed input through model
                 noise_py_x = self.convolution_model.forward(x, self.p_drop_input, self.p_drop_hidden)
                 # reset the gradient
-                optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 # the cross-entropy loss function already contains the softmax
                 loss = mse_loss(noise_py_x, y, reduction="mean")
 
@@ -159,7 +169,7 @@ class handleTraining():
                 # compute the gradient
                 loss.backward()
                 # update weights
-                optimizer.step()
+                self.optimizer.step()
 
                 # Error rate calculation
                 predicted = torch.argmax(noise_py_x, 1)
@@ -192,7 +202,10 @@ class handleTraining():
 
                         incorrect_test += (y.gather(1, predicted.unsqueeze(1)).squeeze(1) != y_max).sum().item()
                         total_test += y.size(0)
-                    scheduler.step(loss)
+                    self.scheduler.step(loss)
+                    if self.learningRate != self.optimizer.param_groups[0]['lr']:
+                        self.learningRate = self.optimizer.param_groups[0]['lr']
+                        print(f">>>Current learning rate: {self.learningRate}<<<")
                 self.progress["test_loss_convol"].append(torch.mean(torch.tensor(test_loss_this_epoch)))
                 error_rate = incorrect_test / total_test
                 self.progress["test_error_rate"].append(error_rate)
@@ -215,6 +228,6 @@ if __name__=="__main__":
         config = yaml.safe_load(file)
     test= handleTraining(config)
     test.ExecuteFullTraining()
-   # test.playGames()
+    #test.playGames()
     #test.prepareGames()
 
