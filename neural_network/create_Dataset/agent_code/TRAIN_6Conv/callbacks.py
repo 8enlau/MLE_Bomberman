@@ -55,16 +55,20 @@ def rectify(x):
     # Rectified Linear Unit (ReLU)
     return torch.max(torch.zeros_like(x), x)
 
-def convolution_model(X, w_conv1, w_conv2,w_conv3, w_h1, w_o):
+def convolution_model(X, w_conv1, w_conv2,w_conv3,w_conv4,w_conv5,w_conv6, w_h1, w_o):
     batch_size = X.shape[0]
-    conv1 = rectify(conv2d(X, w_conv1,padding=1))  # convolutional layer 1 out
-    conv2 = rectify(conv2d(conv1, w_conv2))  # convolutional layer 2 out
-    conv3 = rectify(conv2d(conv2,w_conv3))
-    subsampling_layer3 = max_pool2d(conv3, (2, 2))  # subsampling on convolutional layer 2
+    conv1 = rectify(conv2d(X, w_conv1, padding=1))  # convolutional layer 1 out
+    conv2 = rectify(conv2d(conv1, w_conv2, padding=1))  # convolutional layer 2 out
+    conv3 = rectify(conv2d(conv2, w_conv3))
+    conv4 = rectify(conv2d(conv3, w_conv4))
+    conv5 = rectify(conv2d(conv4, w_conv5))
+    #  subsampling_layer5 = max_pool2d(conv5, (2, 2))# subsampling on convolutional layer 2
+    #  print("subsampling_layer5.shape: {}".format(subsampling_layer5.shape))
+    conv6 = rectify(conv2d(conv5, w_conv6))
+    subsampling_layer6 = max_pool2d(conv6, (2, 2))  # subsampling on convolutional layer 2
 
-    conv_out3 = subsampling_layer3.reshape(batch_size, -1)
-
-    h1 = rectify(conv_out3 @ w_h1)  # Layer 1 out
+    conv_out6 = subsampling_layer6.reshape(batch_size, -1)
+    h1 = rectify(conv_out6 @ w_h1)  # Layer 1 out
     pre_softmax = h1 @ w_o  # Layer 2 out (FINAL)
     return pre_softmax
 
@@ -72,11 +76,13 @@ def setup(self):
     if not os.path.exists("weights.pth"):
         weights = {}
         weights["w_conv1"] = init_weights((32, 1, 3, 3))
-        weights["w_conv2"] = init_weights((64,32,3,3))
-        weights["w_conv3"] = init_weights((64,64,3,3))
-
+        weights["w_conv2"] = init_weights((64, 32, 3, 3))
+        weights["w_conv3"] = init_weights((128, 64, 3, 3))
+        weights["w_conv4"] = init_weights((256, 128, 3, 3))
+        weights["w_conv5"] = init_weights((256, 256, 3, 3))
+        weights["w_conv6"] = init_weights((128, 256, 3, 3))
         # hidden layer with 2048 input and 256 output neurons
-        weights["w_h1"] = init_weights((2304, 128))
+        weights["w_h1"] = init_weights((2048, 128))
         weights["w_o"] = init_weights((128, 6))
         torch.save(weights,"weights.pth")
     else:
@@ -88,11 +94,15 @@ def setup(self):
     self.w_conv1 = weights["w_conv1"]
     self.w_conv2 = weights["w_conv2"]
     self.w_conv3 = weights["w_conv3"]
+    self.w_conv4 = weights["w_conv4"]
+    self.w_conv5 = weights["w_conv5"]
+    self.w_conv6 = weights["w_conv6"]
     self.w_h1 = weights["w_h1"]
     self.w_o = weights["w_o"]
     self.model = convolution_model
     self.actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
     self.rewriteGameState = rewrite_round_data
+    return
 
 def act(agent, game_state: dict):
     reformedGameState = torch.tensor(agent.rewriteGameState(game_state),dtype=torch.float32)
@@ -102,6 +112,9 @@ def act(agent, game_state: dict):
                                 agent.w_conv1,
                                 agent.w_conv2,
                                 agent.w_conv3,
+                                agent.w_conv4,
+                                agent.w_conv5,
+                                agent.w_conv6,
                                 agent.w_h1,
                                 agent.w_o)
     return agent.actions[prediction.argmax()]
