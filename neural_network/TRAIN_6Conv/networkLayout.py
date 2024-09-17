@@ -66,30 +66,19 @@ class NN_model(nn.Module):
         return([self.w_conv1,self.w_conv2,self.w_conv3,self.w_conv4,self.w_conv5,self.w_conv6,self.w_h1,self.w_o])
     def forward(self,X, p_drop_input, p_drop_hidden):
         batch_size = X.shape[0]
-        print("X shape : {}".format(X.shape))
         conv1 = rectify(conv2d(X, self.w_conv1, padding=1))  # convolutional layer 1 out
-        print("conv1.shape: {}".format(conv1.shape))
         conv2 = rectify(conv2d(conv1, self.w_conv2, padding=1))  # convolutional layer 2 out
-        print("conv2.shape: {}".format(conv2.shape))
         conv3 = rectify(conv2d(conv2, self.w_conv3))
-        print("conv3.shape: {}".format(conv3.shape))
         conv4 = rectify(conv2d(conv3, self.w_conv4))
-        print("conv4.shape: {}".format(conv4.shape))
         conv5 = rectify(conv2d(conv4, self.w_conv5))
-        print("conv5.shape: {}".format(conv5.shape))
       #  subsampling_layer5 = max_pool2d(conv5, (2, 2))# subsampling on convolutional layer 2
       #  print("subsampling_layer5.shape: {}".format(subsampling_layer5.shape))
         conv6 = rectify(conv2d(conv5,self.w_conv6))
-        print("conv6.shape: {}".format(conv6.shape))
         subsampling_layer6 = max_pool2d(conv6, (2, 2))  # subsampling on convolutional layer 2
-        print("subsampling_layer6.shape: {}".format(subsampling_layer6.shape))
 
         conv_out6 = subsampling_layer6.reshape(batch_size, -1)
-        print("conv_out6.shape: {}".format(conv_out6.shape))
         h1 = rectify(conv_out6 @ self.w_h1)  # Layer 1 out
-        print("h1.shape: {}".format(h1.shape))
         pre_softmax = h1 @ self.w_o  # Layer 2 out (FINAL)
-        print("output.shape: {}".format(pre_softmax))
         return pre_softmax
 
 class PrepareData:
