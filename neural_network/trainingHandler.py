@@ -65,7 +65,7 @@ class handleTraining():
         self.prepareGames()
 
         #while self.progress["train_loss_convol"][-1]>0.001:
-        for i in range(0,25):
+        for i in range(0,100):
             self.playGames()
             self.prepareGames()
         #print("Train loss below 0.001")
