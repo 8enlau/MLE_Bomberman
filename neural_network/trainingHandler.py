@@ -58,16 +58,17 @@ class handleTraining():
         self.convolution_model = getattr(self.module, 'NN_model')(self.weights).to(self.device)
         # Now start optimizing
         self.optimizer = optim.Adam(params=self.convolution_model.parameters,lr=self.learningRate,eps=self.epsilon)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=10, factor=0.1)
+        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=5, factor=0.5, threshold = 1e-3 )
 
     def ExecuteFullTraining(self):
         self.playGames()
         self.prepareGames()
 
-        while self.progress["train_loss_convol"][-1]>0.001:
+        #while self.progress["train_loss_convol"][-1]>0.001:
+        for i in range(0,25):
             self.playGames()
             self.prepareGames()
-        print("Train loss below 0.001")
+        #print("Train loss below 0.001")
 
 
     def playGames(self):
@@ -131,6 +132,8 @@ class handleTraining():
         num_workers = multiprocessing.cpu_count()
         if num_workers>1:
             num_workers=num_workers-1
+        
+        print(f"Workers: {num_workers}")
 
         train_dataloader = DataLoader(
             dataset=FullDataset,
@@ -147,7 +150,10 @@ class handleTraining():
             num_workers=num_workers,
             pin_memory=True,
         )
-        # Next load the model
+
+
+        # Reset the learning rate 
+        self.optimizer.param_groups[0]['lr'] = self.learningRate
 
         for epoch in range(self.n_epochs + 1):
             train_loss_this_epoch = []
@@ -155,21 +161,37 @@ class handleTraining():
             total_train = 0
             train_progress = tqdm(enumerate(train_dataloader), total=len(train_dataloader),
                                   desc=f"Epoch {epoch}/{self.n_epochs}", unit=" batch")
+            
+            #Initializing Mixed Precision Training
+            from torch.cuda.amp import autocast, GradScaler
+            self.scaler = GradScaler()
+
+
             for idx, batch in train_progress:
                 x, y = batch
                 # feed input through model
-                noise_py_x = self.convolution_model.forward(x, self.p_drop_input, self.p_drop_hidden)
-                # reset the gradient
-                self.optimizer.zero_grad()
-                # the cross-entropy loss function already contains the softmax
-                loss = mse_loss(noise_py_x, y, reduction="mean")
+                with autocast():
+                    noise_py_x = self.convolution_model.forward(x, self.p_drop_input, self.p_drop_hidden)
+                    loss = mse_loss(noise_py_x, y, reduction="mean")
+
+                ### noise_py_x = self.convolution_model.forward(x, self.p_drop_input, self.p_drop_hidden)
+                ### # reset the gradient
+                ### self.optimizer.zero_grad()
+                ### # the cross-entropy loss function already contains the softmax
+                ### loss = mse_loss(noise_py_x, y, reduction="mean")
 
                 train_loss_this_epoch.append(float(loss))
 
-                # compute the gradient
-                loss.backward()
-                # update weights
-                self.optimizer.step()
+                ### # compute the gradient
+                ### loss.backward()
+                ### # update weights
+                ### self.optimizer.step()
+
+
+                # Again MPT
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
 
                 # Error rate calculation
                 predicted = torch.argmax(noise_py_x, 1)
@@ -181,7 +203,7 @@ class handleTraining():
             self.progress["train_error_rate"].append(incorrect_train / total_train)
 
             # test periodically
-            if epoch % 10 == 0:
+            if epoch % 1 == 0:
                 print("Recent Trainerrorrate: ", self.progress["train_error_rate"][-5:])
                 test_loss_this_epoch = []
                 incorrect_test = 0
@@ -202,13 +224,14 @@ class handleTraining():
 
                         incorrect_test += (y.gather(1, predicted.unsqueeze(1)).squeeze(1) != y_max).sum().item()
                         total_test += y.size(0)
-                    self.scheduler.step(loss)
-                    if self.learningRate != self.optimizer.param_groups[0]['lr']:
-                        self.learningRate = self.optimizer.param_groups[0]['lr']
-                        print(f">>>Current learning rate: {self.learningRate}<<<")
                 self.progress["test_loss_convol"].append(torch.mean(torch.tensor(test_loss_this_epoch)))
                 error_rate = incorrect_test / total_test
                 self.progress["test_error_rate"].append(error_rate)
+
+            # if (4 * epoch / self.n_epochs % 1 == 0) and epoch != 0:
+            self.scheduler.step(loss)
+            print(f">>>Next learning rate: {self.optimizer.param_groups[0]['lr']}<<<")
+
         # Save the train progress
         torch.save(self.progress, self.networkName + "/trainProgress.pth")
 
