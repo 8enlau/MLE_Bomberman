@@ -1,4 +1,4 @@
-networkName: "TRAIN_3Conv1Hidden1Subsampling"
+networkName: "TRAIN_6Conv"
 n_epochs: 20
 p_drop_input: 0.005
 p_drop_hidden: 0.005
