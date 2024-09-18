@@ -7,7 +7,7 @@ import numpy as np
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'my_coin_agent_6-6.pt'
+MODEL_FILE = 'my_coin_agent_boxes_1.pt'
 
 # FEATURE VECTOR 
 #     coin direction 
@@ -70,10 +70,6 @@ def act(self, game_state: dict) -> str:
     q_values = self.model[tuple(features)]
     # Rule-based check for invalid actions: moving into walls or crates, placing bomb when you have none
     valid_q = valid_actions(features, game_state, q_values)
-    # # TODO: collect coins
-    # if features[0] != 4 and valid_q[features[0]] != float('-inf'):
-    #     self.logger.debug("coin nearby.")
-    #     valid_q[features[0]] = float('inf')
     best_action = ACTIONS[np.argmax(valid_q)]
 
     self.logger.debug(best_action)

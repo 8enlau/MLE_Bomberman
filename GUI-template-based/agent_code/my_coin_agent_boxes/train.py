@@ -96,9 +96,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     PLOT_steps.append(last_game_state["step"])
     PLOT_mean_steps.append(np.mean(PLOT_steps))
     PLOT_mean_coins.append(np.mean(PLOT_coins))
-    f = open("graph_data.txt", "w")
-    f.write(f'    coins = {PLOT_coins}\n    mean_coins = {PLOT_mean_coins}\n    steps = {PLOT_steps}\n    mean_steps = {PLOT_mean_steps}')
-    f.close()
+    self.logger.info(f'GRAPH: \n    coins = {PLOT_coins}\n    mean_coins = {PLOT_mean_coins}\n    steps = {PLOT_steps}\n    mean_steps = {PLOT_mean_steps}')
     # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")
     PLOT_coins.append(0)    # so can be added in next game round
     
@@ -126,11 +124,13 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 100,
-        e.WAITED: -1,
-        e.INVALID_ACTION: -1,
-        REPETITIVE_ACTION: -10,
-        e.KILLED_SELF: -1,
+        e.COIN_COLLECTED: 50,
+        e.WAITED: -10,
+        e.INVALID_ACTION: -2,
+        REPETITIVE_ACTION: -50,
+        e.KILLED_SELF: -10,
+        e.COIN_FOUND: 5,
+        e.CRATE_DESTROYED: 1
     }
     
     reward_sum = sum(game_rewards.get(event, 0) for event in events)
