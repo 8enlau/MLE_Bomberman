@@ -1,5 +1,8 @@
-networkName: "TRAIN_ThreeConvolutional"
-n_epochs: 15
+networkName: "TRAIN_6Conv"
+n_epochs: 20
 p_drop_input: 0.005
 p_drop_hidden: 0.005
-batch_size: 16384
+batch_size: 4096
+alpha: 0.01
+learningRate: 1e-3
+epsilon: 1e-8

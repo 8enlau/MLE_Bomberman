@@ -79,18 +79,19 @@ def world_controller(world, n_rounds, args,*,
 
 
 
-def mainFunction(config,FurtherAgents=False,weightslock=False):
+def mainFunction(config,FurtherAgents=False):
     args = parser_replacement(config)
-    args.lock=weightslock
     # Initialize environment and agents
     agents = []
     if FurtherAgents:
         agents.append((FurtherAgents,True))
         agents.append((FurtherAgents,True))
+        agents.append(("rule_based_agent",False))
         possibleAgents = ["random_agent","rule_based_agent","coin_collector_agent",
-                          "peaceful_agent","TRAIN_ThreeConvolutional"]
-        agents.append((random.choice(possibleAgents),False))
-        agents.append((random.choice(possibleAgents),False))
+                          "peaceful_agent",FurtherAgents]
+        last_agent = random.choice(possibleAgents)
+        print("Last agent: ", last_agent)
+        agents.append((last_agent,False))
     else:
         if args.my_agent:
             agents.append((args.my_agent, len(agents) < args.train))
@@ -109,14 +110,13 @@ def mainFunction(config,FurtherAgents=False,weightslock=False):
     argsDict={}
     for key in vars(args):
         argsDict[key]=getattr(args, key)
-    del argsDict["lock"]
     with open('create_Dataset/config.yaml', 'w') as file:
         yaml.dump(argsDict, file, default_flow_style=False, allow_unicode=False)
 
 
 if __name__ == '__main__':
     #what about that training_mode?!
-    with open('config.yaml', 'r',Loader=yaml.FullLoader) as file:
+    with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
 #    args=parser_replacement(config)
 

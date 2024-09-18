@@ -44,7 +44,6 @@ class GenericWorld:
     def __init__(self, args: WorldArgs):
         self.args = args
         self.setup_logging()
-        self.lock = args.lock
         self.colors = list(s.AGENT_COLORS)
 
         self.round = 0
@@ -102,11 +101,11 @@ class GenericWorld:
     def build_arena(self) -> Tuple[np.array, List[Coin], List[Agent]]:
         raise NotImplementedError()
 
-    def add_agent(self, agent_dir, name, lock=False,train=False,):
+    def add_agent(self, agent_dir, name,train=False,):
         assert len(self.agents) < s.MAX_AGENTS
 
         # if self.args.single_process:
-        backend = SequentialAgentBackend(train, name, agent_dir,lock)
+        backend = SequentialAgentBackend(train, name, agent_dir)
         # else:
         # backend = ProcessAgentBackend(train, name, agent_dir)
         backend.start()
@@ -329,9 +328,9 @@ class BombeRLeWorld(GenericWorld):
         super().__init__(args)
 
         self.rng = np.random.default_rng(args.seed)
-        self.setup_agents(agents,args.lock)
+        self.setup_agents(agents)
 
-    def setup_agents(self, agents,lock):
+    def setup_agents(self,agents):
         # Add specified agents and start their subprocesses
         self.agents = []
         for agent_dir, train in agents:
@@ -339,7 +338,7 @@ class BombeRLeWorld(GenericWorld):
                 name = agent_dir + '_' + str(list([a.code_name for a in self.agents]).count(agent_dir))
             else:
                 name = agent_dir
-            self.add_agent(agent_dir, name,lock, train=train)
+            self.add_agent(agent_dir, name, train=train)
 
     def build_arena(self):
         WALL = -1
@@ -510,6 +509,7 @@ class BombeRLeWorld(GenericWorld):
     def print_gameplay(self,args):
         file_name = f'Dataset/{args.dataset_counter}_{args.n_rounds}rounds_ordered.json'
         diction_list=[]
+        sorted_dict=[]
         for i in range(args.n_rounds):
             diction_list.append([])
         for a in self.agents:
@@ -535,10 +535,8 @@ class BombeRLeWorld(GenericWorld):
                 game_round=diction["round"]-1
                 del diction["round"]
                 diction_list[game_round].append(diction)
-
         for i in diction_list:
-            i = sorted(i, key=lambda x: x["step"])
-        #    for j in i:
-         #       del j["step"]
+            sorted_dict.append(sorted(i, key=lambda x: x["step"]))
+
         with open(file_name, "w") as file:
-            json.dump(diction_list, file)
+            json.dump(sorted_dict, file)

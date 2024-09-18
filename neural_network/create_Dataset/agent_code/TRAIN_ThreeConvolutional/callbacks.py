@@ -1,3 +1,4 @@
+import copy
 import importlib
 import sys
 
@@ -13,7 +14,29 @@ def init_weights(shape):
     w = torch.randn(size=shape) * std
     w.requires_grad = True
     return w
-
+def rewrite_round_data(step):
+    playField = copy.deepcopy(step["field"])
+    for i in step["coins"]:
+        playField[i[0]][i[1]]= 10
+    selfPlayer=step["self"]
+    playField[selfPlayer[3][0]][selfPlayer[3][1]]=5+int(selfPlayer[2])*5/10
+    for i in step["others"]:
+        playField[i[3][0]][i[3][1]]=2+int(i[2])*5/10
+    for i in step["bombs"]:
+        k=i[0][0]
+        l=i[0][1]
+        if i[1]==3:
+            playField[k][l]=-playField[k][l]
+        else:
+            if playField[k][l]>1:
+                playField[k][l] = -(playField[k][l]+(9-i[1])/10)
+            else:
+                playField[k][l]=-(19-i[1])
+    for index1,i in enumerate(step["explosion_map"]):
+        for index2,j in enumerate(i):
+            if j==1:
+                playField[index1][index2]=-20
+    return(playField)
 def rectify(x):
     # Rectified Linear Unit (ReLU)
     return torch.max(torch.zeros_like(x), x)
@@ -63,19 +86,11 @@ def setup(self):
         # output shape is (B, 10)
         torch.save(weights,"weights.pth")
     else:
-        if self.lock:
-            with self.lock:
-                try:
-                    weights = torch.load("weights.pth",weights_only=True)
-                except FileNotFoundError:
-                    time.sleep(1)
-                    weights = torch.load("weights.pth",weights_only=True)
-        else:
-            try:
-                weights = torch.load("weights.pth")
-            except FileNotFoundError:
-                time.sleep(1)
-                weights = torch.load("weights.pth")
+        try:
+            weights = torch.load("weights.pth",weights_only=True)
+        except FileNotFoundError:
+            time.sleep(1)
+            weights = torch.load("weights.pth",weights_only=True)
     self.w_conv1 = weights["w_conv1"]
     self.w_conv2 = weights["w_conv2"]
     self.w_h1 = weights["w_h1"]
@@ -83,21 +98,7 @@ def setup(self):
     self.w_o = weights["w_o"]
     self.model = convolution_model
     self.actions = ['UP', 'DOWN', 'LEFT', 'RIGHT', 'BOMB', 'WAIT']
-
-
-
-    self.current_directory = os.getcwd()
-    p1 = os.path.dirname(self.current_directory)
-    p2 = os.path.dirname(p1)
-#  p3 = os.path.dirname(p2)
-#  module = importlib.import_module(p3 + ".Reforming_Data")
-# self.rewriteGameState = getattr(module, 'rewrite_round_data')
-
-    sys.path.append(p2)
-    spec = importlib.util.spec_from_file_location("rewrite_round_data", p2 + "/Reforming_Data.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    self.rewriteGameState = module.rewrite_round_data
+    self.rewriteGameState = rewrite_round_data
 
 def act(agent, game_state: dict):
     reformedGameState = torch.tensor(agent.rewriteGameState(game_state),dtype=torch.float32)
