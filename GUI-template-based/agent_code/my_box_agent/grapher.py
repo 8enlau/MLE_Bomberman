@@ -5,6 +5,8 @@ import sys, os
 import numpy as np
 from callbacks import MODEL_FILE
 import csv
+from argparse import ArgumentParser
+
 
 # plt.ion()
 
@@ -41,9 +43,9 @@ def plot(scores, mean_scores, name):
         plt.show(block=False)
         plt.pause(.1)
 
-def get_data():
+def get_data(file_name):
     data = []
-    with open('graph_data.csv', 'r') as file: 
+    with open(file_name, 'r') as file: 
         csv_reader = csv.reader(file) 
         contents = list(csv_reader) 
     for item in contents:
@@ -52,7 +54,7 @@ def get_data():
     return data[0], data[1], data[2], data[3], data[4], data[5]
     
 def train_graph():
-    coins, mean_coins, steps, mean_steps, crates, mean_crates = get_data()
+    coins, mean_coins, steps, mean_steps, crates, mean_crates = get_data('train_data.csv')
     fig, ax = plt.subplots(3, 1)
     games = len(coins)
     X = range(games)
@@ -84,5 +86,39 @@ def train_graph():
     fig.text(0.775, 0.77, f'Training Rewards: {params}', horizontalalignment='left', verticalalignment='top', bbox=dict(facecolor='none', edgecolor='#d9d9d9', boxstyle='round,pad=.5'))
     plt.show()
 
+def game_graph():
+    X, score, mean_score, steps, mean_steps = get_data('game_data.csv')
+    fig, ax = plt.subplots(2, 1)
+    games = len(X)
+    legend_label = ['Total per Round', 'Average Across Rounds']
+    ax[0].plot(X, score)
+    ax[0].plot(X, mean_score)
+    ax[0].set_ylabel('Score')
+    ax[0].set_xlim(xmin=0, xmax=games)
+    ax[0].text(games+10, mean_score[-1], f'{mean_score[-1]:.2f}', color='#ff7f0e')
+    ax[0].text(games+10, np.max(score), f'max: {np.max(score)}', color='#1f77b4')
+
+    ax[1].plot(X, steps[:games])
+    ax[1].plot(X, mean_steps[:games])
+    ax[1].set_ylabel('Steps Survived')
+    ax[1].set_xlabel('Number of Rounds')
+    ax[1].set_xlim(xmin=0, xmax=games)
+    ax[1].text(games+10, mean_steps[-1], f'{mean_steps[-1]:.2f}',  color='#ff7f0e')
+
+    fig.align_xlabels
+    fig.suptitle(f'Model: {MODEL_FILE[:-3]}', y=0.96)
+    fig.legend(labels=legend_label, loc='lower center')
+    fig.tight_layout()
+    plt.show()
+
 if __name__ == '__main__':
-    train_graph()
+    parser = ArgumentParser()
+    subparsers = parser.add_subparsers(dest='command_name', required=True)
+    play_parser = subparsers.add_parser("t")    #train
+    play_parser = subparsers.add_parser("g")    #game
+
+    args = parser.parse_args()
+    if args.command_name == "t":
+        train_graph()
+    if args.command_name == "g":
+        game_graph()

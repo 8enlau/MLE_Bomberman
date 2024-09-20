@@ -141,7 +141,6 @@ def reward_from_events(self, events: List[str]) -> int:
         REPETITIVE_ACTION: -10,
         e.KILLED_SELF: -200,
         ESCAPED_BOMB: 100,
-        e.SURVIVED_ROUND: 100
     }
 
     reward_sum = sum(game_rewards.get(event, 0) for event in events)

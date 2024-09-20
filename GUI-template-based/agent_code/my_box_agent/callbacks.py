@@ -5,10 +5,15 @@ import heapq
 import sys
 
 import numpy as np
+from typing import List
+
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'my_coin_agent_boxes_2-2.pt'
+MODEL_FILE = 'my_box_agent_3.pt'
+GRAPH_ROUNDS = []
+GRAPH_STEPS = []
+GRAPH_SCORE = []
 
 # FEATURE VECTOR 
 #     coin direction 
@@ -24,7 +29,13 @@ def setup(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
-    if not os.path.isfile(MODEL_FILE):
+
+    if self.train:
+        self.logger.info("Loading coin_basis.pt from saved state.")
+        with open("coin_basis.pt", "rb") as file:
+            self.model = pickle.load(file)
+        sys.stdout = open(os.devnull, 'w')
+    elif not os.path.isfile(MODEL_FILE):
         self.logger.info("Setting up model from scratch.")
         #sizes
         num_coin_directions = 5  # 4 directions + WAIT
@@ -35,11 +46,6 @@ def setup(self):
         
         # Initialize the Q-table with the shape that matches the features
         self.model = np.random.rand(num_coin_directions, num_bomb_status, num_danger_status, num_escape_routes, num_crate_nearby, len(ACTIONS))
-    elif self.train:
-        self.logger.info("Loading coin_basis.pt from saved state.")
-        with open("coin_basis.pt", "rb") as file:
-            self.model = pickle.load(file)
-        sys.stdout = open(os.devnull, 'w')
     else:
         self.logger.info("Loading model from saved state.")
         with open(MODEL_FILE, "rb") as file:
@@ -67,12 +73,11 @@ def act(self, game_state: dict) -> str:
     
     if self.train:
         # Rule: explode boxes
-        if features[1] == 1 and features[-1] == 1 and not features[2]:
+        if features[1] == 1 and features[-1] == 1 and not features[2] and np.random.rand() < 0.7:  # 70% chance to bomb
             self.logger.debug("Placing a bomb to destroy crates.")
             return 'BOMB'
     # Rule: must escape if in danger
     if features[2]:
-        print(ACTIONS[features[3]])
         return ACTIONS[features[3]]
     #     # Rule: must move towards coins
     #     if features[0] != 4:
@@ -126,28 +131,62 @@ def check_danger(game_state, x, y):
 
     for (bomb_x, bomb_y), timer in bombs:
         if timer:  # Check bombs that are about to explode
-            if x == bomb_x and 0 > y - bomb_y >= -3:
+            if x == bomb_x and y == bomb_y:
                 in_danger = 1
-                bomb_direction = 0
-            elif x == bomb_x and 0 < y - bomb_y <= 3:
+                bomb_direction = 5  # on top of bomb
+            elif x == bomb_x and y > bomb_y >= y - 3:
                 in_danger = 1
-                bomb_direction = 2
-            elif y == bomb_y and 0 > x - bomb_x >= -3:
+                bomb_direction = 0  # bomb above
+            elif x == bomb_x and y < bomb_y <= y + 3:
                 in_danger = 1
-                bomb_direction = 1
-            elif y == bomb_y and 0 < x - bomb_x <= 3:
+                bomb_direction = 2  # bomb below
+            elif y == bomb_y and x > bomb_x >= x - 3:
                 in_danger = 1
-                bomb_direction = 3
+                bomb_direction = 3  # bomb to my left
+            elif y == bomb_y and x < bomb_x <= x + 3:
+                in_danger = 1
+                bomb_direction = 1  # bomb to my right
 
     if in_danger:
         # Determine a safe direction
         # use mod 4 to find direction preferencing a corner
-        ideal_directions = [(bomb_direction + 1)%4, (bomb_direction + 3)%4, (bomb_direction + 2)%4]
-        for direction in ideal_directions:
-            if not path_blocked(ACTIONS[direction], (x, y), game_state):
-                escape_direction = direction
-    
+        if bomb_direction == 5:
+            ideal_directions = no_deadends(game_state)
+            if ideal_directions:
+            # TODO: can make a better ideal direction based on coin proximity
+                escape_direction = random.choice(ideal_directions)
+        else:
+            ideal_directions = [(bomb_direction + 1)%4, (bomb_direction + 3)%4, (bomb_direction + 2)%4]
+            for direction in ideal_directions:
+                if not path_blocked(direction, (x, y), game_state):
+                    escape_direction = direction
     return in_danger, escape_direction
+
+
+def no_deadends(game_state):
+    x, y = game_state['self'][-1]
+    field = game_state['field']
+    direction_offsets = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+    safe_directions = []
+
+    for dir in range(4):
+        blocked = 0
+        for distance in range(4):
+            new_offset = (direction_offsets[dir][0] * distance, direction_offsets[dir][1] * distance)
+            new_x = x + new_offset[0]
+            new_y = y + new_offset[1]
+            directions = [dir, (dir + 1) % 4, (dir - 1) % 4]
+            if distance > 0 and (not path_blocked(directions[1], (new_x, new_y), game_state)\
+                or not path_blocked(directions[2], (new_x, new_y), game_state)):
+                continue
+            elif not path_blocked(directions[0], (new_x, new_y), game_state):
+                pass
+            else:
+                blocked = 1
+                break
+        if not blocked: safe_directions.append(dir)
+    return safe_directions
+
 
 def check_crates(game_state, x, y):
     """
@@ -183,27 +222,35 @@ def path_blocked(action, position, game_state):
     x, y = position
     field = game_state['field']
     explosion_map = game_state['explosion_map']
+    bombs = game_state['bombs']
+    bomb_locations = [bomb[0] for bomb in bombs]
+    if x < 0 or x > field.shape[0]-1 or y < 0 or y > field.shape[1]-1:
+        return 1
     
-    if action == 'UP':
-        if y-1 > 0 and (field[x, y-1] == -1 or explosion_map[x, y-1] != 0):
+    if action == 0: # UP
+        y -= 1
+        if y > 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif y-1 > 0 and field[x, y-1] == 1:
+        elif y > 0 and field[x, y] == 1:
             return 2
         return (field[x, y-1] == -1 or explosion_map[x, y-1] != 0)
-    elif action == 'DOWN':
-        if y < field.shape[1] - 1 and (field[x, y+1] == -1 or explosion_map[x, y+1] != 0):
+    elif action == 2:   # DOWN
+        y += 1
+        if y < field.shape[1] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif y < field.shape[1] - 1 and field[x, y+1] == 1:
+        elif y < field.shape[1] - 1 and field[x, y] == 1:
             return 2
-    elif action == 'LEFT':
-        if x > 0 and (field[x-1, y] == -1 or explosion_map[x-1, y] != 0):
+    elif action == 3:   # LEFT
+        x -= 1
+        if x > 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif x > 0 and field[x-1, y] == 1:
+        elif x > 0 and field[x, y] == 1:
             return 2
-    elif action == 'RIGHT':
-        if x < field.shape[0] - 1 and (field[x+1, y] == -1 or explosion_map[x+1, y] != 0):
+    elif action == 1:   # RIGHT
+        x += 1
+        if x < field.shape[0] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif x < field.shape[0] - 1 and field[x+1, y] == 1:
+        elif x < field.shape[0] - 1 and field[x, y] == 1:
             return 2
     
     return 0
@@ -215,7 +262,7 @@ def valid_actions(features, game_state, q_values):
     corners = [(1, field.shape[1] - 2), (field.shape[0] - 2, 1), (1, 1), (field.shape[0] - 2, field.shape[1] - 2)]
     valid = []
     for i in range(4):  # check blocked movements
-        if path_blocked(ACTIONS[i], position, game_state):
+        if path_blocked(i, position, game_state):
             valid.append(float('-inf'))
         else:
             valid.append(q_values[i])
@@ -225,6 +272,7 @@ def valid_actions(features, game_state, q_values):
     else:
         valid.append(q_values[5])
     return valid
+
 
 def dijkstra(game_state, start_x, start_y):
     """
@@ -260,11 +308,11 @@ def dijkstra(game_state, start_x, start_y):
 
         # Explore neighbors (UP, RIGHT, DOWN, LEFT)
         direction_offsets = [(0, -1), (1, 0), (0, 1), (-1, 0)]
-        for i, dir in enumerate(ACTIONS[:4]):
+        for i in range(4):
             new_x, new_y = x + direction_offsets[i][0], y + direction_offsets[i][1]
             # Check if the neighbor has not been visited and is a free tile
             if (new_x, new_y) not in visited:
-                blocked = path_blocked(dir, (x, y), game_state)
+                blocked = path_blocked(i, (x, y), game_state)
                 if not blocked:
                     new_distance = current_distance + 1  # 1 distance for free block
                     heapq.heappush(pq, (new_distance, new_x, new_y))
@@ -309,9 +357,18 @@ def find_coin_direction_dijkstra(game_state, x, y):
     coins = game_state['coins']
     if not coins:
         valid_actions = [4]
-        for i, action in enumerate(ACTIONS[:4]):
-            if not path_blocked(action, game_state['self'][-1], game_state):
+        for i in range(4):
+            if not path_blocked(i, game_state['self'][-1], game_state):
                 valid_actions.append(i)
         return np.random.choice(valid_actions)    # no coins availiable, use WAIT as placeholder
     dir = dijkstra(game_state, x, y)
     return dir
+
+def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
+    """
+    Final update at the end of the round.
+
+    :param self: The same object that is passed to all of your callbacks.
+    """
+    steps_survived = last_game_state['step']
+    print(last_game_state)
