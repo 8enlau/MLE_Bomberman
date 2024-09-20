@@ -99,7 +99,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     PLOT_mean_steps.append(np.mean(PLOT_steps))
     PLOT_mean_coins.append(np.mean(PLOT_coins))
     PLOT_mean_crates.append(np.mean(PLOT_crates))
-    with open('graph_data.csv', 'w', newline='') as f:
+    with open('train_data.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(PLOT_coins)
         writer.writerow(PLOT_mean_coins)
@@ -134,13 +134,20 @@ def reward_from_events(self, events: List[str]) -> int:
     Here you can modify the rewards your agent get so as to en/discourage
     certain behavior.
     """
+    # game_rewards = {
+    #     e.COIN_COLLECTED: 100,
+    #     e.WAITED: -1,
+    #     e.INVALID_ACTION: -1,
+    #     REPETITIVE_ACTION: -10,
+    #     e.KILLED_SELF: -200,
+    #     ESCAPED_BOMB: 100,
+    # }
     game_rewards = {
         e.COIN_COLLECTED: 100,
         e.WAITED: -1,
         e.INVALID_ACTION: -1,
         REPETITIVE_ACTION: -10,
-        e.KILLED_SELF: -200,
-        ESCAPED_BOMB: 100,
+        e.KILLED_SELF: -1,
     }
 
     reward_sum = sum(game_rewards.get(event, 0) for event in events)

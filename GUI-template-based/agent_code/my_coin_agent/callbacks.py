@@ -2,6 +2,8 @@ import os
 import pickle
 import random
 import heapq
+from typing import List
+import csv
 
 import numpy as np
 
@@ -15,6 +17,11 @@ MODEL_FILE = 'my_coin_agent_6-6.pt'
 #     in danger 
 #     escape direction
 #     crate nearby
+GRAPH_ROUNDS = []
+GRAPH_STEPS = []
+GRAPH_STEPS_MEAN = []
+GRAPH_SCORE = []
+GRAPH_SCORE_MEAN = []
 
 
 def setup(self):
@@ -330,3 +337,25 @@ def find_coin_direction_dijkstra(game_state, x, y):
         return 4    # no coins availiable, use WAIT as placeholder
     dir = dijkstra(game_state, x, y)
     return dir
+
+
+def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
+    """
+    used for graphing
+    """
+    steps_survived = last_game_state['step']
+    round = last_game_state['round']
+    score = last_game_state['self'][1]
+    GRAPH_ROUNDS.append(round)
+    GRAPH_SCORE.append(score)
+    GRAPH_STEPS.append(steps_survived)
+    GRAPH_SCORE_MEAN.append(np.mean(GRAPH_SCORE))
+    GRAPH_STEPS_MEAN.append(np.mean(GRAPH_STEPS))
+    with open('game_data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(GRAPH_ROUNDS)
+        writer.writerow(GRAPH_SCORE)
+        writer.writerow(GRAPH_SCORE_MEAN)
+        writer.writerow(GRAPH_STEPS)
+        writer.writerow(GRAPH_STEPS_MEAN)
+    f.close()    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")

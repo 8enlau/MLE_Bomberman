@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
-from IPython import display
 from contextlib import contextmanager
-import sys, os
 import numpy as np
 from callbacks import MODEL_FILE
 import csv
@@ -17,31 +15,6 @@ params = f'\
     \n    repetitive action: -10 \
     \n    killed self: -20 '
 
-@contextmanager
-def surpress_stdout():
-    with open(os.devnull, "w") as devnull:
-        old_stdout = sys.stdout
-        sys.stdout = devnull
-        try:
-            yield
-        finally:
-            sys.stdout = old_stdout
-
-def plot(scores, mean_scores, name):
-    with surpress_stdout():
-        display.clear_output(wait=True)
-        display.display(plt.gcf())
-        plt.clf()
-        plt.title('Training...')
-        plt.xlabel('Number of Games')
-        plt.ylabel(f'{name}')
-        plt.plot(scores)
-        plt.plot(mean_scores)
-        plt.ylim(ymin=0)
-        plt.text(len(scores)-1, scores[-1], str(scores[-1]))
-        plt.text(len(mean_scores)-1, mean_scores[-1], str(mean_scores[-1]))
-        plt.show(block=False)
-        plt.pause(.1)
 
 def get_data(file_name):
     data = []
@@ -51,7 +24,7 @@ def get_data(file_name):
     for item in contents:
         numbers = [float(num) for num in item]
         data.append(numbers)
-    return data[0], data[1], data[2], data[3], data[4], data[5]
+    return data
     
 def train_graph():
     coins, mean_coins, steps, mean_steps, crates, mean_crates = get_data('train_data.csv')
@@ -94,22 +67,26 @@ def game_graph():
     ax[0].plot(X, score)
     ax[0].plot(X, mean_score)
     ax[0].set_ylabel('Score')
-    ax[0].set_xlim(xmin=0, xmax=games)
-    ax[0].text(games+10, mean_score[-1], f'{mean_score[-1]:.2f}', color='#ff7f0e')
-    ax[0].text(games+10, np.max(score), f'max: {np.max(score)}', color='#1f77b4')
+    ax[0].set_xlim(xmin=1, xmax=games)
+    ax[0].set_ylim(ymin=0, ymax=50)
+    ax[0].text(games+10, mean_score[-1]-4, f'{mean_score[-1]:.2f}', color='#ff7f0e')
+    ax[0].text(games+10, 48, f'max: {np.max(score):.0f}', color='#1f77b4')
 
     ax[1].plot(X, steps[:games])
     ax[1].plot(X, mean_steps[:games])
     ax[1].set_ylabel('Steps Survived')
     ax[1].set_xlabel('Number of Rounds')
-    ax[1].set_xlim(xmin=0, xmax=games)
-    ax[1].text(games+10, mean_steps[-1], f'{mean_steps[-1]:.2f}',  color='#ff7f0e')
+    ax[1].set_xlim(xmin=1, xmax=games)
+    ax[1].set_ylim(ymin=0, ymax=450)
+    ax[1].text(games+10, mean_steps[-1], f'{mean_steps[-1]:.0f}',  color='#ff7f0e')
 
     fig.align_xlabels
-    fig.suptitle(f'Model: {MODEL_FILE[:-3]}', y=0.96)
-    fig.legend(labels=legend_label, loc='lower center')
+    fig.suptitle(f'Model: {MODEL_FILE[:-3]}', y=0.94, x=0.2, ha='left')
+    fig.legend(labels=legend_label, loc='lower right', bbox_to_anchor=(0.89,0.89))
     fig.tight_layout()
+    fig.set_size_inches(8, 6)
     plt.show()
+
 
 if __name__ == '__main__':
     parser = ArgumentParser()

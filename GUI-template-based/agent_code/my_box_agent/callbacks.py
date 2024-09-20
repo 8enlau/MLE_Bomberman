@@ -6,14 +6,16 @@ import sys
 
 import numpy as np
 from typing import List
-
+import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'my_box_agent_3.pt'
+MODEL_FILE = 'coin_basis.pt'
 GRAPH_ROUNDS = []
 GRAPH_STEPS = []
+GRAPH_STEPS_MEAN = []
 GRAPH_SCORE = []
+GRAPH_SCORE_MEAN = []
 
 # FEATURE VECTOR 
 #     coin direction 
@@ -71,14 +73,14 @@ def act(self, game_state: dict) -> str:
         self.logger.debug(random_choice)
         return random_choice
     
-    if self.train:
-        # Rule: explode boxes
-        if features[1] == 1 and features[-1] == 1 and not features[2] and np.random.rand() < 0.7:  # 70% chance to bomb
-            self.logger.debug("Placing a bomb to destroy crates.")
-            return 'BOMB'
-    # Rule: must escape if in danger
-    if features[2]:
-        return ACTIONS[features[3]]
+    # if self.train:
+    #     # Rule: explode boxes
+    #     if features[1] == 1 and features[-1] == 1 and not features[2] and np.random.rand() < 0.7:  # 70% chance to bomb
+    #         self.logger.debug("Placing a bomb to destroy crates.")
+    #         return 'BOMB'
+    # # Rule: must escape if in danger
+    # if features[2]:
+    #     return ACTIONS[features[3]]
     #     # Rule: must move towards coins
     #     if features[0] != 4:
     #         return ACTIONS[features[0]]
@@ -90,6 +92,7 @@ def act(self, game_state: dict) -> str:
     best_action = ACTIONS[np.argmax(valid_q)]
 
     self.logger.debug(best_action)
+    pos = game_state["self"][-1]
     return best_action
 
 
@@ -209,7 +212,7 @@ def check_crates(game_state, x, y):
         return 1
     return 0
 
-def path_blocked(action, position, game_state):
+def path_blocked(action, position, game_state) -> int:
     """
     Checks if the given action would lead the agent into a wall.
     
@@ -219,38 +222,37 @@ def path_blocked(action, position, game_state):
     :param boxes_block: Whether of not boxes are counted as a block
     :return: 0 if not blocked, 1 if wall or explosion, 2 if crate
     """
-    x, y = position
+    x, y = 1, 2
     field = game_state['field']
     explosion_map = game_state['explosion_map']
     bombs = game_state['bombs']
     bomb_locations = [bomb[0] for bomb in bombs]
     if x < 0 or x > field.shape[0]-1 or y < 0 or y > field.shape[1]-1:
         return 1
-    
+
     if action == 0: # UP
         y -= 1
-        if y > 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        if y >= 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif y > 0 and field[x, y] == 1:
+        elif y >= 0 and field[x, y] == 1:
             return 2
-        return (field[x, y-1] == -1 or explosion_map[x, y-1] != 0)
     elif action == 2:   # DOWN
         y += 1
-        if y < field.shape[1] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        if y <= field.shape[1] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif y < field.shape[1] - 1 and field[x, y] == 1:
+        elif y <= field.shape[1] - 1 and field[x, y] == 1:
             return 2
     elif action == 3:   # LEFT
         x -= 1
-        if x > 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        if x >= 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif x > 0 and field[x, y] == 1:
+        elif x >= 0 and field[x, y] == 1:
             return 2
     elif action == 1:   # RIGHT
         x += 1
-        if x < field.shape[0] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        if x <= field.shape[0] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
             return 1
-        elif x < field.shape[0] - 1 and field[x, y] == 1:
+        elif x <= field.shape[0] - 1 and field[x, y] == 1:
             return 2
     
     return 0
@@ -366,9 +368,21 @@ def find_coin_direction_dijkstra(game_state, x, y):
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
     """
-    Final update at the end of the round.
-
-    :param self: The same object that is passed to all of your callbacks.
+    used for graphing
     """
     steps_survived = last_game_state['step']
-    print(last_game_state)
+    round = last_game_state['round']
+    score = last_game_state['self'][1]
+    GRAPH_ROUNDS.append(round)
+    GRAPH_SCORE.append(score)
+    GRAPH_STEPS.append(steps_survived)
+    GRAPH_SCORE_MEAN.append(np.mean(GRAPH_SCORE))
+    GRAPH_STEPS_MEAN.append(np.mean(GRAPH_STEPS))
+    with open('game_data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(GRAPH_ROUNDS)
+        writer.writerow(GRAPH_SCORE)
+        writer.writerow(GRAPH_SCORE_MEAN)
+        writer.writerow(GRAPH_STEPS)
+        writer.writerow(GRAPH_STEPS_MEAN)
+    f.close()    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")
