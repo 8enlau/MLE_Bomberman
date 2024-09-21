@@ -10,7 +10,7 @@ import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'my_box_agent_4.pt'
+MODEL_FILE = 'coin_basis_2.pt'
 GRAPH_ROUNDS = []
 GRAPH_STEPS = []
 GRAPH_STEPS_MEAN = []
@@ -22,7 +22,6 @@ GRAPH_SCORE_MEAN = []
 #     bomb safe  
 #     in danger 
 #     escape direction
-#     crate nearby
 
 
 def setup(self):
@@ -33,11 +32,12 @@ def setup(self):
     """
 
     if self.train:
-        self.logger.info("Loading coin_basis.pt from saved state.")
-        with open("coin_basis.pt", "rb") as file:
-            self.model = pickle.load(file)
-        sys.stdout = open(os.devnull, 'w')
-    elif not os.path.isfile(MODEL_FILE):
+        pass
+        # self.logger.info("Loading coin_basis.pt from saved state.")
+        # with open("coin_basis.pt", "rb") as file:
+        #     self.model = pickle.load(file)
+        # sys.stdout = open(os.devnull, 'w')
+    if not os.path.isfile(MODEL_FILE):
         self.logger.info("Setting up model from scratch.")
         #sizes
         num_coin_directions = 5  # 4 directions + WAIT
@@ -72,15 +72,15 @@ def act(self, game_state: dict) -> str:
         self.logger.debug(random_choice)
         return random_choice
     
-    if self.train:
-        # Rule: explode boxes
-        if features[1] == 1 and crate_nearby(game_state) and not features[2]:  # 70% chance to bomb
-            self.logger.debug("Placing a bomb to destroy crates.")
-            return 'BOMB'
-        # Rule: must escape if in danger
-        if features[2]:
-            return ACTIONS[features[3]]
-    # #     # Rule: must move towards coins
+    # if self.train:
+    #     # Rule: explode boxes
+    #     if features[1] == 1 and crate_nearby(game_state) and not features[2]:  # 70% chance to bomb
+    #         self.logger.debug("Placing a bomb to destroy crates.")
+    #         return 'BOMB'
+    #     # Rule: must escape if in danger
+    #     if features[2]:
+    #         return ACTIONS[features[3]]
+    # # #     # Rule: must move towards coins
     #     if features[0] != 4:
     #         return ACTIONS[features[0]]
     self.logger.debug("Querying model for action.")
@@ -97,22 +97,22 @@ def act(self, game_state: dict) -> str:
 
 def state_to_features(game_state: dict) -> np.array:
     """
-    Converts the game state to the input of your model, i.e.
+    Converts the game state to the input of the model, i.e.
     a feature vector.
 
     :param game_state:  A dictionary describing the current game board.
     :return: np.array
     """
-    # This is the dict before the game begins and after it ends
     if game_state is None:
         return None
 
     x, y = game_state['self'][-1]
-    bomb_available = int(game_state['self'][2]) #TODO
+    bomb_available = int((game_state['self'][2] and len(no_deadends(game_state)) > 0))
     coin_direction = find_coin_direction_dijkstra(game_state, x, y)
     in_danger, escape_direction = check_danger(game_state, x, y)
 
     return (coin_direction, bomb_available, in_danger, escape_direction)
+
 
 def check_danger(game_state, x, y):
     """
@@ -124,8 +124,6 @@ def check_danger(game_state, x, y):
     :return: a tuple: (1 if in danger 0 if not , an integer representing the escape direction (0: UP, 1: RIGHT, 2: DOWN, 3: LEFT))
     """
     bombs = game_state['bombs']
-    explosion_map = game_state['explosion_map']
-    field = game_state['field']
     in_danger = 0
     escape_direction = 4  # Default to WAIT
     bomb_direction = 4  # Default to WAIT
@@ -166,7 +164,6 @@ def check_danger(game_state, x, y):
 
 def no_deadends(game_state):
     x, y = game_state['self'][-1]
-    field = game_state['field']
     direction_offsets = [(0, -1), (1, 0), (0, 1), (-1, 0)]
     safe_directions = []
 
@@ -210,6 +207,7 @@ def crate_nearby(game_state):
     if x <= field.shape[0] - 1 and field[x+1, y] == 1:  # RIGHT
         return 1
     return 0
+
 
 def path_blocked(action, position, game_state) -> int:
     """
@@ -258,9 +256,7 @@ def path_blocked(action, position, game_state) -> int:
 
 
 def valid_actions(features, game_state, q_values):
-    field = game_state['field']
     position = game_state['self'][-1]
-    corners = [(1, field.shape[1] - 2), (field.shape[0] - 2, 1), (1, 1), (field.shape[0] - 2, field.shape[1] - 2)]
     valid = []
     for i in range(4):  # check blocked movements
         if path_blocked(i, position, game_state):
@@ -365,13 +361,13 @@ def find_coin_direction_dijkstra(game_state, x, y):
     dir = dijkstra(game_state, x, y)
     return dir
 
-def end_of_round_game(self, last_game_state: dict, last_action: str, events: List[str]):
+def end_of_round_game(self, game_state: dict, last_action: str, events: List[str]):
     """
     used for graphing
     """
-    steps_survived = last_game_state['step']
-    round = last_game_state['round']
-    score = last_game_state['self'][1]
+    steps_survived = game_state['step']
+    round = game_state['round']
+    score = game_state['self'][1]
     GRAPH_ROUNDS.append(round)
     GRAPH_SCORE.append(score)
     GRAPH_STEPS.append(steps_survived)
