@@ -61,6 +61,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     if e.COIN_COLLECTED in events:
         PLOT_coins[-1] += 1
     if e.CRATE_DESTROYED in events:
+        print("test")
         PLOT_crates[-1] += 1
 
     old_features = state_to_features(old_game_state)
@@ -135,19 +136,22 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     # game_rewards = {
-    #     e.COIN_COLLECTED: 100,
+    #     e.COIN_COLLECTED: 500,
     #     e.WAITED: -1,
     #     e.INVALID_ACTION: -1,
-    #     REPETITIVE_ACTION: -10,
-    #     e.KILLED_SELF: -200,
-    #     ESCAPED_BOMB: 100,
+    #     REPETITIVE_ACTION: -50,
+    #     e.KILLED_SELF: -100,
+    #     e.CRATE_DESTROYED: 20,
+    #     ESCAPED_BOMB: 100
     # }
     game_rewards = {
-        e.COIN_COLLECTED: 100,
         e.WAITED: -1,
         e.INVALID_ACTION: -1,
-        REPETITIVE_ACTION: -10,
-        e.KILLED_SELF: -1,
+        REPETITIVE_ACTION: -2,
+        e.KILLED_SELF: -5,
+        ESCAPED_BOMB: 100,
+        e.COIN_COLLECTED:10,
+        e.BOMB_DROPPED: 10
     }
 
     reward_sum = sum(game_rewards.get(event, 0) for event in events)

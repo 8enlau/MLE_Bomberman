@@ -10,7 +10,7 @@ import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'coin_basis.pt'
+MODEL_FILE = 'my_box_agent_4.pt'
 GRAPH_ROUNDS = []
 GRAPH_STEPS = []
 GRAPH_STEPS_MEAN = []
@@ -19,7 +19,7 @@ GRAPH_SCORE_MEAN = []
 
 # FEATURE VECTOR 
 #     coin direction 
-#     bomb availiable  
+#     bomb safe  
 #     in danger 
 #     escape direction
 #     crate nearby
@@ -41,13 +41,12 @@ def setup(self):
         self.logger.info("Setting up model from scratch.")
         #sizes
         num_coin_directions = 5  # 4 directions + WAIT
-        num_bomb_status = 2  # Bomb available or not
+        num_bomb_status = 2  # Safe to place bomb or not
         num_danger_status = 2  # In danger or not
         num_escape_routes = 5  # 4 escape directions + WAIT
-        num_crate_nearby = 2  # crate in adjacent block or not
         
         # Initialize the Q-table with the shape that matches the features
-        self.model = np.random.rand(num_coin_directions, num_bomb_status, num_danger_status, num_escape_routes, num_crate_nearby, len(ACTIONS))
+        self.model = np.random.rand(num_coin_directions, num_bomb_status, num_danger_status, num_escape_routes, len(ACTIONS))
     else:
         self.logger.info("Loading model from saved state.")
         with open(MODEL_FILE, "rb") as file:
@@ -73,15 +72,15 @@ def act(self, game_state: dict) -> str:
         self.logger.debug(random_choice)
         return random_choice
     
-    # if self.train:
-    #     # Rule: explode boxes
-    #     if features[1] == 1 and features[-1] == 1 and not features[2] and np.random.rand() < 0.7:  # 70% chance to bomb
-    #         self.logger.debug("Placing a bomb to destroy crates.")
-    #         return 'BOMB'
-    # # Rule: must escape if in danger
-    # if features[2]:
-    #     return ACTIONS[features[3]]
-    #     # Rule: must move towards coins
+    if self.train:
+        # Rule: explode boxes
+        if features[1] == 1 and crate_nearby(game_state) and not features[2]:  # 70% chance to bomb
+            self.logger.debug("Placing a bomb to destroy crates.")
+            return 'BOMB'
+        # Rule: must escape if in danger
+        if features[2]:
+            return ACTIONS[features[3]]
+    # #     # Rule: must move towards coins
     #     if features[0] != 4:
     #         return ACTIONS[features[0]]
     self.logger.debug("Querying model for action.")
@@ -109,12 +108,11 @@ def state_to_features(game_state: dict) -> np.array:
         return None
 
     x, y = game_state['self'][-1]
-    bomb_available = int(game_state['self'][2])
+    bomb_available = int(game_state['self'][2]) #TODO
     coin_direction = find_coin_direction_dijkstra(game_state, x, y)
     in_danger, escape_direction = check_danger(game_state, x, y)
-    crate_nearby = check_crates(game_state, x, y)
 
-    return (coin_direction, bomb_available, in_danger, escape_direction, crate_nearby)
+    return (coin_direction, bomb_available, in_danger, escape_direction)
 
 def check_danger(game_state, x, y):
     """
@@ -137,16 +135,16 @@ def check_danger(game_state, x, y):
             if x == bomb_x and y == bomb_y:
                 in_danger = 1
                 bomb_direction = 5  # on top of bomb
-            elif x == bomb_x and y > bomb_y >= y - 3:
+            elif x == bomb_x and y > bomb_y >= y - 4:
                 in_danger = 1
                 bomb_direction = 0  # bomb above
-            elif x == bomb_x and y < bomb_y <= y + 3:
+            elif x == bomb_x and y < bomb_y <= y + 4:
                 in_danger = 1
                 bomb_direction = 2  # bomb below
-            elif y == bomb_y and x > bomb_x >= x - 3:
+            elif y == bomb_y and x > bomb_x >= x - 4:
                 in_danger = 1
                 bomb_direction = 3  # bomb to my left
-            elif y == bomb_y and x < bomb_x <= x + 3:
+            elif y == bomb_y and x < bomb_x <= x + 4:
                 in_danger = 1
                 bomb_direction = 1  # bomb to my right
 
@@ -191,7 +189,7 @@ def no_deadends(game_state):
     return safe_directions
 
 
-def check_crates(game_state, x, y):
+def crate_nearby(game_state):
     """
     Checks if there are any crates in the adjacent tiles.
     
@@ -201,14 +199,15 @@ def check_crates(game_state, x, y):
     :return: 1 if there is at least one crate nearby, 0 otherwise
     """
     field = game_state['field']
+    x, y = game_state['self'][-1]
     
-    if y > 0 and field[x, y-1] == 1:  # UP
+    if y >= 0 and field[x, y-1] == 1:  # UP
         return 1
-    if y < field.shape[1] - 1 and field[x, y+1] == 1:  # DOWN
+    if y <= field.shape[1] - 1 and field[x, y+1] == 1:  # DOWN
         return 1
-    if x > 0 and field[x-1, y] == 1:  # LEFT
+    if x >= 0 and field[x-1, y] == 1:  # LEFT
         return 1
-    if x < field.shape[0] - 1 and field[x+1, y] == 1:  # RIGHT
+    if x <= field.shape[0] - 1 and field[x+1, y] == 1:  # RIGHT
         return 1
     return 0
 
@@ -222,7 +221,7 @@ def path_blocked(action, position, game_state) -> int:
     :param boxes_block: Whether of not boxes are counted as a block
     :return: 0 if not blocked, 1 if wall or explosion, 2 if crate
     """
-    x, y = 1, 2
+    x, y = position
     field = game_state['field']
     explosion_map = game_state['explosion_map']
     bombs = game_state['bombs']
@@ -269,7 +268,7 @@ def valid_actions(features, game_state, q_values):
         else:
             valid.append(q_values[i])
     valid.append(float(4))  # WAIT is always valid
-    if features[1] == 0 or position in corners:  # cant place bomb if you dont have one, shouldnt place bomb in start corners
+    if features[1] == 0:  # cant place bomb if you dont have one
         valid.append(float('-inf'))
     else:
         valid.append(q_values[5])
@@ -366,7 +365,7 @@ def find_coin_direction_dijkstra(game_state, x, y):
     dir = dijkstra(game_state, x, y)
     return dir
 
-def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
+def end_of_round_game(self, last_game_state: dict, last_action: str, events: List[str]):
     """
     used for graphing
     """

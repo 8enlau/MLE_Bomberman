@@ -9,11 +9,12 @@ from argparse import ArgumentParser
 # plt.ion()
 
 params = f'\
-    \n    coin collected: 100 \
+    \n    coin collected: 50 \
     \n    waited: -1 \
     \n    invalid action: -1 \
     \n    repetitive action: -10 \
-    \n    killed self: -20 '
+    \n    killed self: -20 \
+    \n    escaped bomb: 100'
 
 
 def get_data(file_name):
@@ -68,9 +69,9 @@ def game_graph():
     ax[0].plot(X, mean_score)
     ax[0].set_ylabel('Score')
     ax[0].set_xlim(xmin=1, xmax=games)
-    ax[0].set_ylim(ymin=0, ymax=50)
+    ax[0].set_ylim(ymin=0, ymax=100)
     ax[0].text(games+10, mean_score[-1]-4, f'{mean_score[-1]:.2f}', color='#ff7f0e')
-    ax[0].text(games+10, 48, f'max: {np.max(score):.0f}', color='#1f77b4')
+    ax[0].text(games+10, 98, f'max: {np.max(score):.0f}', color='#1f77b4')
 
     ax[1].plot(X, steps[:games])
     ax[1].plot(X, mean_steps[:games])
