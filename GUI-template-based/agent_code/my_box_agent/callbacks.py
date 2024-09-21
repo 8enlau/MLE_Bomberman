@@ -10,7 +10,7 @@ import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'coin_basis_2.pt'
+MODEL_FILE = 'my_box_agent_4.pt'
 GRAPH_ROUNDS = []
 GRAPH_STEPS = []
 GRAPH_STEPS_MEAN = []
@@ -32,12 +32,11 @@ def setup(self):
     """
 
     if self.train:
-        pass
-        # self.logger.info("Loading coin_basis.pt from saved state.")
-        # with open("coin_basis.pt", "rb") as file:
-        #     self.model = pickle.load(file)
-        # sys.stdout = open(os.devnull, 'w')
-    if not os.path.isfile(MODEL_FILE):
+        self.logger.info("Loading coin_basis.pt from saved state.")
+        with open("coin_basis_2.pt", "rb") as file:
+            self.model = pickle.load(file)
+        sys.stdout = open(os.devnull, 'w')
+    elif not os.path.isfile(MODEL_FILE):
         self.logger.info("Setting up model from scratch.")
         #sizes
         num_coin_directions = 5  # 4 directions + WAIT
@@ -61,6 +60,7 @@ def act(self, game_state: dict) -> str:
     :param game_state: The dictionary that describes everything on the board.
     :return: The action to take as a string.
     """
+    pos = game_state["self"][-1]
     # Convert game state to features
     features = state_to_features(game_state)
 
@@ -73,14 +73,16 @@ def act(self, game_state: dict) -> str:
         return random_choice
     
     # if self.train:
-    #     # Rule: explode boxes
-    #     if features[1] == 1 and crate_nearby(game_state) and not features[2]:  # 70% chance to bomb
-    #         self.logger.debug("Placing a bomb to destroy crates.")
-    #         return 'BOMB'
-    #     # Rule: must escape if in danger
-    #     if features[2]:
-    #         return ACTIONS[features[3]]
-    # # #     # Rule: must move towards coins
+        # Rule: explode boxes
+    if features[1] == 1 and crate_nearby(game_state) and not features[2]: 
+        self.logger.debug("Placing a bomb to destroy crates.")
+        print(pos, features, 'BOMB', game_state['explosion_map'][pos], game_state['bombs'])
+        return 'BOMB'
+    # Rule: must escape if in danger
+    if features[2]:
+        print(pos, features, ACTIONS[features[3]], game_state['explosion_map'][pos], game_state['bombs'])
+        return ACTIONS[features[3]]
+    # #     # Rule: must move towards coins
     #     if features[0] != 4:
     #         return ACTIONS[features[0]]
     self.logger.debug("Querying model for action.")
@@ -91,7 +93,7 @@ def act(self, game_state: dict) -> str:
     best_action = ACTIONS[np.argmax(valid_q)]
 
     self.logger.debug(best_action)
-    pos = game_state["self"][-1]
+    print(pos, features, best_action, game_state['explosion_map'][pos], game_state['bombs'])
     return best_action
 
 
@@ -107,9 +109,13 @@ def state_to_features(game_state: dict) -> np.array:
         return None
 
     x, y = game_state['self'][-1]
-    bomb_available = int((game_state['self'][2] and len(no_deadends(game_state)) > 0))
+    bomb_available = int((game_state['self'][2] and find_escape(game_state, 5) != None))
     coin_direction = find_coin_direction_dijkstra(game_state, x, y)
-    in_danger, escape_direction = check_danger(game_state, x, y)
+    in_danger, bomb_direction = check_danger(game_state, x, y)
+    if in_danger:
+        escape_direction = find_escape(game_state, bomb_direction)
+    else:
+        escape_direction = 4
 
     return (coin_direction, bomb_available, in_danger, escape_direction)
 
@@ -125,42 +131,45 @@ def check_danger(game_state, x, y):
     """
     bombs = game_state['bombs']
     in_danger = 0
-    escape_direction = 4  # Default to WAIT
     bomb_direction = 4  # Default to WAIT
 
     for (bomb_x, bomb_y), timer in bombs:
-        if timer:  # Check bombs that are about to explode
-            if x == bomb_x and y == bomb_y:
-                in_danger = 1
-                bomb_direction = 5  # on top of bomb
-            elif x == bomb_x and y > bomb_y >= y - 4:
-                in_danger = 1
-                bomb_direction = 0  # bomb above
-            elif x == bomb_x and y < bomb_y <= y + 4:
-                in_danger = 1
-                bomb_direction = 2  # bomb below
-            elif y == bomb_y and x > bomb_x >= x - 4:
-                in_danger = 1
-                bomb_direction = 3  # bomb to my left
-            elif y == bomb_y and x < bomb_x <= x + 4:
-                in_danger = 1
-                bomb_direction = 1  # bomb to my right
+        if x == bomb_x and y == bomb_y:
+            in_danger = 1
+            bomb_direction = 5  # on top of bomb
+        elif x == bomb_x and y > bomb_y >= y - 3:
+            in_danger = 1
+            bomb_direction = 0  # bomb above
+        elif x == bomb_x and y < bomb_y <= y + 3:
+            in_danger = 1
+            bomb_direction = 2  # bomb below
+        elif y == bomb_y and x > bomb_x >= x - 3:
+            in_danger = 1
+            bomb_direction = 3  # bomb to my left
+        elif y == bomb_y and x < bomb_x <= x + 3:
+            in_danger = 1
+            bomb_direction = 1  # bomb to my right
 
-    if in_danger:
-        # Determine a safe direction
-        # use mod 4 to find direction preferencing a corner
-        if bomb_direction == 5:
-            ideal_directions = no_deadends(game_state)
-            if ideal_directions:
-            # TODO: can make a better ideal direction based on coin proximity
-                escape_direction = random.choice(ideal_directions)
-        else:
-            ideal_directions = [(bomb_direction + 1)%4, (bomb_direction + 3)%4, (bomb_direction + 2)%4]
-            for direction in ideal_directions:
-                if not path_blocked(direction, (x, y), game_state):
-                    escape_direction = direction
-    return in_danger, escape_direction
+    return in_danger, bomb_direction
 
+
+def find_escape(game_state, bomb_direction):
+    # Determine a safe direction
+    # use mod 4 to find direction preferencing a corner
+    x, y = game_state['self'][-1]
+    if bomb_direction == 5:
+        ideal_directions = no_deadends(game_state)
+        if ideal_directions:
+        # TODO: can make a better ideal direction based on coin proximity
+            return random.choice(ideal_directions)
+    else:
+        ideal_directions = [(bomb_direction + 1)%4, (bomb_direction + 3)%4, (bomb_direction + 2)%4]
+        for direction in ideal_directions:
+            if not path_blocked(direction, (x, y), game_state):
+                print(direction)
+                return direction
+    return 4
+    
 
 def no_deadends(game_state):
     x, y = game_state['self'][-1]
@@ -228,26 +237,38 @@ def path_blocked(action, position, game_state) -> int:
         return 1
 
     if action == 0: # UP
+        d1, b1 = check_danger(game_state, x, y)
         y -= 1
-        if y >= 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        d2, b2 = check_danger(game_state, x, y)
+        if (y >= 0      # check new coordinate is valid
+            and (field[x, y] == -1      # wall in the way
+                 or explosion_map[x, y] != 0    # current explosion
+                 or (x, y) in bomb_locations    # bomb in the way
+                 or (d2 and not d1))):      # am not in danger but would move into danger (danger -> danger is fine)
             return 1
-        elif y >= 0 and field[x, y] == 1:
+        elif y >= 0 and field[x, y] == 1:   # crate in the way
             return 2
     elif action == 2:   # DOWN
+        d1, b1 = check_danger(game_state, x, y)
         y += 1
-        if y <= field.shape[1] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        d2, b2 = check_danger(game_state, x, y)
+        if y <= field.shape[1] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations or (d2 and not d1)):
             return 1
         elif y <= field.shape[1] - 1 and field[x, y] == 1:
             return 2
     elif action == 3:   # LEFT
+        d1, b1 = check_danger(game_state, x, y)
         x -= 1
-        if x >= 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        d2, b2 = check_danger(game_state, x, y)
+        if x >= 0 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations or (d2 and not d1)):
             return 1
         elif x >= 0 and field[x, y] == 1:
             return 2
     elif action == 1:   # RIGHT
+        d1, b1 = check_danger(game_state, x, y)
         x += 1
-        if x <= field.shape[0] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations):
+        d2, b2 = check_danger(game_state, x, y)
+        if x <= field.shape[0] - 1 and (field[x, y] == -1 or explosion_map[x, y] != 0 or (x, y) in bomb_locations or (d2 and not d1)):
             return 1
         elif x <= field.shape[0] - 1 and field[x, y] == 1:
             return 2
