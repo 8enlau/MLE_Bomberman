@@ -12,9 +12,10 @@ params = f'\
     \n    coin collected: 50 \
     \n    waited: -1 \
     \n    invalid action: -1 \
-    \n    repetitive action: -10 \
-    \n    killed self: -20 \
-    \n    escaped bomb: 100'
+    \n    repetitive action: -1 \
+    \n    killed self: -11 \
+    \n    escaped bomb: 5\
+    \n    crate destroyed: 10'
 
 
 def get_data(file_name):

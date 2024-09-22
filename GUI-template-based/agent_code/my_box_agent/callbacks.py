@@ -3,6 +3,7 @@ import pickle
 import random
 import heapq
 import sys
+from collections import deque
 
 import numpy as np
 from typing import List
@@ -10,7 +11,8 @@ import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
-MODEL_FILE = 'my_box_agent_4.pt'
+DIRECTION_OFFSETS = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+MODEL_FILE = 'my_box_agent_5.pt'
 GRAPH_ROUNDS = []
 GRAPH_STEPS = []
 GRAPH_STEPS_MEAN = []
@@ -33,10 +35,10 @@ def setup(self):
 
     if self.train:
         self.logger.info("Loading coin_basis.pt from saved state.")
-        with open("coin_basis_2.pt", "rb") as file:
+        with open("my_box_agent_4.pt", "rb") as file:
             self.model = pickle.load(file)
         sys.stdout = open(os.devnull, 'w')
-    elif not os.path.isfile(MODEL_FILE):
+    elif self.train or not os.path.isfile(MODEL_FILE):
         self.logger.info("Setting up model from scratch.")
         #sizes
         num_coin_directions = 5  # 4 directions + WAIT
@@ -72,15 +74,13 @@ def act(self, game_state: dict) -> str:
         self.logger.debug(random_choice)
         return random_choice
     
-    # if self.train:
-        # Rule: explode boxes
-    if features[1] == 1 and crate_nearby(game_state) and not features[2]: 
-        self.logger.debug("Placing a bomb to destroy crates.")
-        print(pos, features, 'BOMB', game_state['explosion_map'][pos], game_state['bombs'])
-        return 'BOMB'
+        # if self.train and np.random.rand() < 1:   # 50% chance we force a desired action
+            # Rule: explode boxes
+        if features[1] == 1 and crate_nearby(game_state) and not features[2]: 
+            self.logger.debug("Placing a bomb to destroy crates.")
+            return 'BOMB'
     # Rule: must escape if in danger
     if features[2]:
-        print(pos, features, ACTIONS[features[3]], game_state['explosion_map'][pos], game_state['bombs'])
         return ACTIONS[features[3]]
     # #     # Rule: must move towards coins
     #     if features[0] != 4:
@@ -93,7 +93,6 @@ def act(self, game_state: dict) -> str:
     best_action = ACTIONS[np.argmax(valid_q)]
 
     self.logger.debug(best_action)
-    print(pos, features, best_action, game_state['explosion_map'][pos], game_state['bombs'])
     return best_action
 
 
@@ -166,20 +165,18 @@ def find_escape(game_state, bomb_direction):
         ideal_directions = [(bomb_direction + 1)%4, (bomb_direction + 3)%4, (bomb_direction + 2)%4]
         for direction in ideal_directions:
             if not path_blocked(direction, (x, y), game_state):
-                print(direction)
                 return direction
     return 4
     
 
 def no_deadends(game_state):
     x, y = game_state['self'][-1]
-    direction_offsets = [(0, -1), (1, 0), (0, 1), (-1, 0)]
     safe_directions = []
 
     for dir in range(4):
         blocked = 0
         for distance in range(4):
-            new_offset = (direction_offsets[dir][0] * distance, direction_offsets[dir][1] * distance)
+            new_offset = (DIRECTION_OFFSETS[dir][0] * distance, DIRECTION_OFFSETS[dir][1] * distance)
             new_x = x + new_offset[0]
             new_y = y + new_offset[1]
             directions = [dir, (dir + 1) % 4, (dir - 1) % 4]
@@ -290,78 +287,7 @@ def valid_actions(features, game_state, q_values):
     else:
         valid.append(q_values[5])
     return valid
-
-
-def dijkstra(game_state, start_x, start_y):
-    """
-    Dijkstra's algorithm to find the shortest path to the nearest coin.
-   
-    :param game_state: The current game state containing the board and coin positions.
-    :param start: The starting position of the agent (x, y).
-    :return: The first direction (UP, RIGHT, DOWN, LEFT) to take toward the nearest coin.
-    """
-    def update_path():
-        """helper: If we've found a shorter path update dictionaries"""
-        if ((new_x, new_y) not in distance_dict or new_distance < distance_dict[(new_x, new_y)]):
-            distance_dict[(new_x, new_y)] = new_distance
-            parent_dict[(new_x, new_y)] = (x, y, i)  # Store the predecessor and direction
-
-    coins = game_state['coins']   
-    pq = [] # Priority queue (empty heap)
-    heapq.heappush(pq, (0, start_x, start_y))  # (distance, x, y) -> distance from agent to itself is 0
-    distance_dict = {(start_x, start_y): 0} # shortest known distance to each tile -> distance from agent to itself is 0
-    parent_dict = {} # parent of each node for path reconstruction (child x, child y): (parent x, parent y, direction)
-    visited = set()
-
-    while pq:
-        # Get the tile with the smallest distance
-        current_distance, x, y = heapq.heappop(pq)
-
-        # If this tile is a coin, reconstruct the path and return the direction
-        if (x, y) in coins:
-            return reconstruct_path(parent_dict, (start_x, start_y), (x, y))
-
-        # Mark the current node as visited
-        visited.add((x, y))
-
-        # Explore neighbors (UP, RIGHT, DOWN, LEFT)
-        direction_offsets = [(0, -1), (1, 0), (0, 1), (-1, 0)]
-        for i in range(4):
-            new_x, new_y = x + direction_offsets[i][0], y + direction_offsets[i][1]
-            # Check if the neighbor has not been visited and is a free tile
-            if (new_x, new_y) not in visited:
-                blocked = path_blocked(i, (x, y), game_state)
-                if not blocked:
-                    new_distance = current_distance + 1  # 1 distance for free block
-                    heapq.heappush(pq, (new_distance, new_x, new_y))
-                    update_path()
-                elif blocked == 2: # blocked by crate
-                    new_distance = current_distance + 5  # 5 distance for crate (distance penalty to encourage free space movement)
-                    heapq.heappush(pq, (new_distance, new_x, new_y))
-                    update_path()
-    return 4  # wait if no way to a coin
-
-
-def reconstruct_path(parent_dict, start, end):
-    """
-    Reconstruct the first move from the start to the end using the parent_dict dictionary.
-   
-    :param parent_dict: A dictionary mapping each node to its predecessor and direction.
-    :param start: The starting position of the agent (x, y).
-    :param end: The position of the nearest coin (x, y).
-    :return: The first direction (UP, RIGHT, DOWN, LEFT) to take from the start.
-    """
-    current = end
-    # Backtrack from the coin to the start
-    while current in parent_dict:
-        prev_x, prev_y, direction = parent_dict[current]
-
-        # If the predecessor is the starting point, return the direction to move
-        if (prev_x, prev_y) == start:
-            return direction
-
-        current = (prev_x, prev_y)
-    return 4  # wait if no path is found
+    
 
 def find_coin_direction_dijkstra(game_state, x, y):
     """
@@ -372,8 +298,78 @@ def find_coin_direction_dijkstra(game_state, x, y):
     :param y: The y-coordinate of the agent.
     :return: The direction (UP, RIGHT, DOWN, LEFT, WAIT) to the nearest coin.
     """
+    def dijkstra(game_state, start_x, start_y):
+        """
+        Dijkstra's algorithm to find the shortest path to the nearest coin.
+    
+        :param game_state: The current game state containing the board and coin positions.
+        :param start: The starting position of the agent (x, y).
+        :return: The first direction (UP, RIGHT, DOWN, LEFT) to take toward the nearest coin.
+        """
+        def update_path():
+            """helper: If we've found a shorter path update dictionaries"""
+            if ((new_x, new_y) not in distance_dict or new_distance < distance_dict[(new_x, new_y)]):
+                distance_dict[(new_x, new_y)] = new_distance
+                parent_dict[(new_x, new_y)] = (x, y, i)  # Store the predecessor and direction
+
+        coins = game_state['coins']   
+        pq = [] # Priority queue (empty heap)
+        heapq.heappush(pq, (0, start_x, start_y))  # (distance, x, y) -> distance from agent to itself is 0
+        distance_dict = {(start_x, start_y): 0} # shortest known distance to each tile -> distance from agent to itself is 0
+        parent_dict = {} # parent of each node for path reconstruction (child x, child y): (parent x, parent y, direction)
+        visited = set()
+
+        while pq:
+            # Get the tile with the smallest distance
+            current_distance, x, y = heapq.heappop(pq)
+
+            # If this tile is a coin, reconstruct the path and return the direction
+            if (x, y) in coins:
+                return reconstruct_path(parent_dict, (start_x, start_y), (x, y))
+
+            # Mark the current node as visited
+            visited.add((x, y))
+
+            # Explore neighbors (UP, RIGHT, DOWN, LEFT)
+            for i in range(4):
+                new_x, new_y = x + DIRECTION_OFFSETS[i][0], y + DIRECTION_OFFSETS[i][1]
+                # Check if the neighbor has not been visited and is a free tile
+                if (new_x, new_y) not in visited:
+                    blocked = path_blocked(i, (x, y), game_state)
+                    if not blocked:
+                        new_distance = current_distance + 1  # 1 distance for free block
+                        heapq.heappush(pq, (new_distance, new_x, new_y))
+                        update_path()
+                    elif blocked == 2: # blocked by crate
+                        new_distance = current_distance + 5  # 5 distance for crate (distance penalty to encourage free space movement)
+                        heapq.heappush(pq, (new_distance, new_x, new_y))
+                        update_path()
+        return 4  # wait if no way to a coin
+
+    def reconstruct_path(parent_dict, start, end):
+        """
+        Reconstruct the first move from the start to the end using the parent_dict dictionary.
+    
+        :param parent_dict: A dictionary mapping each node to its predecessor and direction.
+        :param start: The starting position of the agent (x, y).
+        :param end: The position of the nearest coin (x, y).
+        :return: The first direction (UP, RIGHT, DOWN, LEFT) to take from the start.
+        """
+        current = end
+        # Backtrack from the coin to the start
+        while current in parent_dict:
+            prev_x, prev_y, direction = parent_dict[current]
+
+            # If the predecessor is the starting point, return the direction to move
+            if (prev_x, prev_y) == start:
+                return direction
+
+            current = (prev_x, prev_y)
+        return 4  # wait if no path is found
+
     coins = game_state['coins']
     if not coins:
+        return find_crate_direction(game_state, x, y)   # no coins availiable so find closest crate 
         valid_actions = [4]
         for i in range(4):
             if not path_blocked(i, game_state['self'][-1], game_state):
@@ -381,6 +377,46 @@ def find_coin_direction_dijkstra(game_state, x, y):
         return np.random.choice(valid_actions)    # no coins availiable, use WAIT as placeholder
     dir = dijkstra(game_state, x, y)
     return dir
+
+
+def find_crate_direction(game_state, start_x, start_y):
+    """
+    Find the direction to the nearest crate using BFS.
+   
+    :param game_state: The current game state.
+    :param x: The x-coordinate of the agent.
+    :param y: The y-coordinate of the agent.
+    :return: The direction (UP, RIGHT, DOWN, LEFT, WAIT) to the nearest crate.
+    """
+    
+    q = [] # (direction, x, y)
+    for i in range(4): # add up right down left to queue
+        q.append((i, start_x + DIRECTION_OFFSETS[i][0], start_y + DIRECTION_OFFSETS[i][1]))
+
+    visited = set((start_x, start_y))   # the field we are on cannot be a crate
+    field = game_state['field']
+
+    while q:
+        first_direction, x, y = q.pop()
+
+        # If this tile is a crate, return the first direction
+        if 0 < x < field.shape[0] and 0 < y < field.shape[1] and field[x, y] == 1:
+            return first_direction
+
+        # Mark the current node as visited
+        visited.add((x, y))
+
+        # Explore neighbors (UP, RIGHT, DOWN, LEFT)
+        for i in range(4):
+            new_x, new_y = x + DIRECTION_OFFSETS[i][0], y + DIRECTION_OFFSETS[i][1]
+            # Check if the neighbor has not been visited and is a free tile
+            if (new_x, new_y) not in visited:
+                blocked = path_blocked(i, (x, y), game_state)
+                if not blocked:
+                    q.append((first_direction, new_x, new_y))
+                
+    return 4  # wait if no way to a coin
+
 
 def end_of_round_game(self, game_state: dict, last_action: str, events: List[str]):
     """
