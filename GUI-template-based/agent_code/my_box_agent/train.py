@@ -1,6 +1,7 @@
 from collections import namedtuple, deque
 
 import pickle
+import csv
 from typing import List
 
 import events as e
@@ -21,6 +22,15 @@ RECORD_ENEMY_TRANSITIONS = 1.0  # record enemy transitions with probability ...
 # Events
 PLACEHOLDER_EVENT = "PLACEHOLDER"
 REPETITIVE_ACTION = "REPETITIVE_ACTION"
+ESCAPED_BOMB = "ESCAPED BOMB"
+
+# Some variables for graphing
+PLOT_coins = [0]
+PLOT_mean_coins = []
+PLOT_steps = [0]
+PLOT_mean_steps = []
+PLOT_crates = [0]
+PLOT_mean_crates = []
 
 
 def setup_training(self):
@@ -48,6 +58,10 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
+    if e.COIN_COLLECTED in events:
+        PLOT_coins[-1] += 1
+    if e.CRATE_DESTROYED in events:
+        PLOT_crates[-1] += 1
 
     old_features = state_to_features(old_game_state)
     new_features = state_to_features(new_game_state)
@@ -60,6 +74,8 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     # Check for repetitive behavior (e.g., LEFT, RIGHT, LEFT)
     if repetitive_action(self):
         events.append(REPETITIVE_ACTION)
+    if escaped_bomb(events):
+        events.append(ESCAPED_BOMB)
         
     reward = reward_from_events(self, events)
     self.transitions.append(Transition(old_features, self_action, new_features, reward))
@@ -77,8 +93,25 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     :param self: The same object that is passed to all of your callbacks.
     """
+    # Log and plot
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step: {last_game_state["step"]}')
+    PLOT_steps.append(last_game_state["step"])
+    PLOT_mean_steps.append(np.mean(PLOT_steps))
+    PLOT_mean_coins.append(np.mean(PLOT_coins))
+    PLOT_mean_crates.append(np.mean(PLOT_crates))
+    with open('train_data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(PLOT_coins)
+        writer.writerow(PLOT_mean_coins)
+        writer.writerow(PLOT_steps)
+        writer.writerow(PLOT_mean_steps)
+        writer.writerow(PLOT_crates)
+        writer.writerow(PLOT_mean_crates)
+    f.close()    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")
+    PLOT_coins.append(0)    # so can be added in next game round
+    PLOT_crates.append(0)
     
+    # reward
     last_features = state_to_features(last_game_state)
     action_index = ACTIONS.index(last_action)
     
@@ -101,21 +134,35 @@ def reward_from_events(self, events: List[str]) -> int:
     Here you can modify the rewards your agent get so as to en/discourage
     certain behavior.
     """
+    # game_rewards = {
+    #     e.COIN_COLLECTED: 100,
+    #     e.WAITED: -1,
+    #     e.INVALID_ACTION: -1,
+    #     REPETITIVE_ACTION: -10,
+    #     e.KILLED_SELF: -200,
+    #     ESCAPED_BOMB: 100,
+    # }
     game_rewards = {
-        e.COIN_COLLECTED: 20,
-        e.WAITED: -5,
-        REPETITIVE_ACTION: -10
+        e.COIN_COLLECTED: 100,
+        e.WAITED: -1,
+        e.INVALID_ACTION: -1,
+        REPETITIVE_ACTION: -10,
+        e.KILLED_SELF: -1,
     }
-    
+
     reward_sum = sum(game_rewards.get(event, 0) for event in events)
     self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
     return reward_sum
 
 def repetitive_action(self):
      # Check for repetitive behavior (e.g., LEFT, RIGHT, LEFT)
-    if len(self.last_actions) == 3:
+    if len(self.last_actions) >= 3:
         if (self.last_actions[0] == 'LEFT' and self.last_actions[1] == 'RIGHT' and self.last_actions[2] == 'LEFT') or \
            (self.last_actions[0] == 'RIGHT' and self.last_actions[1] == 'LEFT' and self.last_actions[2] == 'RIGHT') or \
            (self.last_actions[0] == 'UP' and self.last_actions[1] == 'DOWN' and self.last_actions[2] == 'UP') or \
            (self.last_actions[0] == 'DOWN' and self.last_actions[1] == 'UP' and self.last_actions[2] == 'DOWN'):
            return True
+
+def escaped_bomb(events):
+    if e.BOMB_EXPLODED in events and not e.KILLED_SELF in events:
+        return True

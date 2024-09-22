@@ -115,26 +115,62 @@ def find_coin_direction(game_state, x, y):
     
     # Calculate Manhattan distance to each coin
     min_distance = float('inf')
-    best_direction = [-1, -1] 
-    offset = [0, 0]
+    direction = 4
     for (coin_x, coin_y) in coins:
-        distance = abs(coin_x - x) + abs(coin_y - y) 
+        distance = abs(coin_x - x) + abs(coin_y - y)
         if distance < min_distance:
             min_distance = distance
+            
             # Determine the direction to the nearest coin
-            offset[0] = abs(coin_y - y)
-            offset[1] = abs(coin_x - x)
-            if coin_y < y:
-                best_direction[0] = 0  # UP
-            elif coin_y > y:
-                best_direction[0] = 2  # DOWN
-            if coin_x > x:
-                best_direction[1] = 1  # RIGHT
-            elif coin_x < x:
-                best_direction[1] = 3  # LEFT
-    if max(best_direction) == -1:
-        return 4
-    return random.choice(best_direction)
+            # UP
+            if coin_y < y and coin_x == x:
+                if not path_blocked('UP', game_state):
+                    direction = 0
+                else:
+                    direction = random.choice((1, 3))
+            # RIGHT
+            elif coin_y == y and coin_x > x:
+                if not path_blocked('RIGHT', game_state):
+                    direction = 1
+                else:
+                    direction = random.choice((0, 2))
+            # DOWN
+            elif coin_y > y and coin_x == x:
+                if not path_blocked('DOWN', game_state):
+                    direction = 2
+                else:
+                    direction = random.choice((1, 3))
+            # LEFT
+            elif coin_y == y and coin_x < x:
+                if not path_blocked('LEFT', game_state):
+                    direction = 3
+                else:
+                    direction = random.choice((0, 2))
+            # UP LEFT
+            elif coin_y < y and coin_x < x:
+                if not path_blocked('UP', game_state):
+                    direction = 0
+                else:
+                    direction = 3
+            # UP RIGHT
+            elif coin_y < y  and coin_x > x:
+                if not path_blocked('UP', game_state):
+                    direction = 0
+                else:
+                    direction = 1
+            # down left
+            elif coin_y > y and coin_x < x:
+                if not path_blocked('DOWN', game_state):
+                    direction = 2
+                else:
+                    direction = 3
+            # down right
+            elif coin_y > y and coin_x > x:
+                if not path_blocked('DOWN', game_state):
+                    direction = 2
+                else:
+                    direction = 1
+    return direction
 
 def check_danger(game_state, x, y):
     """

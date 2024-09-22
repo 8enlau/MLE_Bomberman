@@ -21,6 +21,14 @@ RECORD_ENEMY_TRANSITIONS = 1.0  # record enemy transitions with probability ...
 # Events
 PLACEHOLDER_EVENT = "PLACEHOLDER"
 REPETITIVE_ACTION = "REPETITIVE_ACTION"
+ZOOM = "ZOOM"
+CORNER = "CORNER"
+
+# Some variables for graphing
+PLOT_coins = [0]
+PLOT_mean_coins = []
+PLOT_steps = [0]
+PLOT_mean_steps = []
 
 
 def setup_training(self):
@@ -48,6 +56,8 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
+    if e.COIN_COLLECTED in events:
+        PLOT_coins[-1] += 1
 
     old_features = state_to_features(old_game_state)
     new_features = state_to_features(new_game_state)
@@ -60,6 +70,10 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     # Check for repetitive behavior (e.g., LEFT, RIGHT, LEFT)
     if repetitive_action(self):
         events.append(REPETITIVE_ACTION)
+    if zoom(self):
+        events.append(ZOOM)
+    if corner(self):
+        events.append(CORNER)
         
     reward = reward_from_events(self, events)
     self.transitions.append(Transition(old_features, self_action, new_features, reward))
@@ -77,8 +91,18 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     :param self: The same object that is passed to all of your callbacks.
     """
+    # Log and plot
     self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step: {last_game_state["step"]}')
+    PLOT_steps.append(last_game_state["step"])
+    PLOT_mean_steps.append(np.mean(PLOT_steps))
+    PLOT_mean_coins.append(np.mean(PLOT_coins))
+    f = open("graph_data.txt", "w")
+    f.write(f'    coins = {PLOT_coins}\n    mean_coins = {PLOT_mean_coins}\n    steps = {PLOT_steps}\n    mean_steps = {PLOT_mean_steps}')
+    f.close()
+    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")
+    PLOT_coins.append(0)    # so can be added in next game round
     
+    # reward
     last_features = state_to_features(last_game_state)
     action_index = ACTIONS.index(last_action)
     
@@ -102,9 +126,11 @@ def reward_from_events(self, events: List[str]) -> int:
     certain behavior.
     """
     game_rewards = {
-        e.COIN_COLLECTED: 20,
-        e.WAITED: -5,
-        REPETITIVE_ACTION: -10
+        e.COIN_COLLECTED: 100,
+        e.WAITED: -1,
+        e.INVALID_ACTION: -1,
+        REPETITIVE_ACTION: -10,
+        e.KILLED_SELF: -1,
     }
     
     reward_sum = sum(game_rewards.get(event, 0) for event in events)
@@ -118,4 +144,26 @@ def repetitive_action(self):
            (self.last_actions[0] == 'RIGHT' and self.last_actions[1] == 'LEFT' and self.last_actions[2] == 'RIGHT') or \
            (self.last_actions[0] == 'UP' and self.last_actions[1] == 'DOWN' and self.last_actions[2] == 'UP') or \
            (self.last_actions[0] == 'DOWN' and self.last_actions[1] == 'UP' and self.last_actions[2] == 'DOWN'):
+           return True
+
+def zoom(self):
+     # Check for zoom (e.g., LEFT, LEFT)
+    if len(self.last_actions) >= 2:
+        if (self.last_actions[-2] == 'LEFT' and self.last_actions[-1] == 'LEFT') or \
+           (self.last_actions[-2] == 'RIGHT' and self.last_actions[-1] == 'RIGHT') or \
+           (self.last_actions[-2] == 'UP' and self.last_actions[-1] == 'UP') or \
+           (self.last_actions[-2] == 'DOWN' and self.last_actions[-1] == 'DOWN'):
+           return True
+        
+def corner(self):
+     # Check for corner (e.g., UP, LEFT)
+    if len(self.last_actions) >= 2:
+        if (self.last_actions[-2] == 'UP' and self.last_actions[-1] == 'RIGHT') or \
+           (self.last_actions[-2] == 'UP' and self.last_actions[-1] == 'RIGHT') or \
+           (self.last_actions[-2] == 'DOWN' and self.last_actions[-1] == 'LEFT') or \
+           (self.last_actions[-2] == 'DOWN' and self.last_actions[-1] == 'RIGHT') or \
+           (self.last_actions[-2] == 'LEFT' and self.last_actions[-1] == 'UP') or \
+           (self.last_actions[-2] == 'LEFT' and self.last_actions[-1] == 'DOWN') or \
+           (self.last_actions[-2] == 'RIGHT' and self.last_actions[-1] == 'UP') or \
+           (self.last_actions[-2] == 'RIGHT' and self.last_actions[-1] == 'DOWN'):
            return True
