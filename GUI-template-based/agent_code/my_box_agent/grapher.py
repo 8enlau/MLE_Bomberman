@@ -63,10 +63,6 @@ def train_graph():
 
 def game_graph():
     X, score, mean_score, steps, mean_steps = get_data('game_data.csv')
-    for i in range(len(score)):
-        score[i] += 1
-    for i in range(len(mean_score)):
-        mean_score[i] = np.mean(score[:i])
     fig, ax = plt.subplots(2, 1)
     games = len(X)
     legend_label = ['Total per Round', 'Average Across Rounds']
@@ -74,9 +70,9 @@ def game_graph():
     ax[0].plot(X, mean_score)
     ax[0].set_ylabel('Score')
     ax[0].set_xlim(xmin=1, xmax=games)
-    ax[0].set_ylim(ymin=0, ymax=100)
-    ax[0].text(games+10, mean_score[-1]-4, f'{mean_score[-1]:.2f}', color='#ff7f0e')
-    ax[0].text(games+10, 98, f'max: {np.max(score):.0f}', color='#1f77b4')
+    ax[0].set_ylim(ymin=0, ymax=10)
+    ax[0].text(games+10, mean_score[-1], f'{mean_score[-1]:.2f}', color='#ff7f0e')
+    ax[0].text(games+10, 9, f'max: {np.max(score):.0f}', color='#1f77b4')
 
     ax[1].plot(X, steps[:games])
     ax[1].plot(X, mean_steps[:games])

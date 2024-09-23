@@ -2,12 +2,9 @@ import os
 import pickle
 import random
 import heapq
-import sys
 from collections import deque
 
 import numpy as np
-from typing import List
-import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
@@ -33,12 +30,7 @@ def setup(self):
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
 
-    if self.train and False: # 6 and 7 IS ACTUALLY FALSE
-        self.logger.info("Loading coin_basis.pt from saved state.")
-        with open("coin_basis_2.pt", "rb") as file:
-            self.model = pickle.load(file)
-        sys.stdout = open(os.devnull, 'w')
-    elif self.train or not os.path.isfile(MODEL_FILE):
+    if self.train or not os.path.isfile(MODEL_FILE):
         self.logger.info("Setting up model from scratch.")
         #sizes
         num_coin_directions = 5  # 4 directions + WAIT
@@ -436,25 +428,3 @@ def find_crate_direction(game_state, start_x, start_y):
                         q.append((first_direction, new_x, new_y))
                 
     return 4  # wait if no way to a crate
-
-
-def end_of_round_game(self, game_state: dict, last_action: str, events: List[str]):
-    """
-    used for graphing
-    """
-    steps_survived = game_state['step']
-    round = game_state['round']
-    score = game_state['self'][1]
-    GRAPH_ROUNDS.append(round)
-    GRAPH_SCORE.append(score)
-    GRAPH_STEPS.append(steps_survived)
-    GRAPH_SCORE_MEAN.append(np.mean(GRAPH_SCORE))
-    GRAPH_STEPS_MEAN.append(np.mean(GRAPH_STEPS))
-    with open('game_data.csv', 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(GRAPH_ROUNDS)
-        writer.writerow(GRAPH_SCORE)
-        writer.writerow(GRAPH_SCORE_MEAN)
-        writer.writerow(GRAPH_STEPS)
-        writer.writerow(GRAPH_STEPS_MEAN)
-    f.close()    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")
