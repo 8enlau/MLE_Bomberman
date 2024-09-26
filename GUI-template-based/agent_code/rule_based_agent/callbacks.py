@@ -208,3 +208,7 @@ def act(self, game_state):
                 self.bomb_history.append((x, y))
 
             return a
+
+
+def end_of_round_game(self, game_state: dict, last_action: str, events):
+        pass
