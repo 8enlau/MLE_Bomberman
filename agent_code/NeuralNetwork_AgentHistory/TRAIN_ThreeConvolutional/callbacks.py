@@ -1,11 +1,8 @@
 import copy
-import importlib
-import sys
-
 import numpy as np
 import os,time
 import torch
-from torch.nn.functional import conv2d, max_pool2d, cross_entropy
+from torch.nn.functional import conv2d, max_pool2d
 
 def init_weights(shape):
     # Kaiming He initialization (a good initialization is important)

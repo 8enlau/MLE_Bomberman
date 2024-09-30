@@ -53,7 +53,7 @@ def end_of_round(self, last_game_state, last_action, events):
     weights["w_conv4"] = self.model.parameters[3]
     weights["w_conv5"] = self.model.parameters[4]
     weights["w_conv6"] = self.model.parameters[5]
-        # hidden layer with 2048 input and 256 output neurons
+    # hidden layer with 2048 input and 256 output neurons
     weights["w_h1"] = self.model.parameters[-2]
     weights["w_o"] = self.model.parameters[-1]
     torch.save(weights, "weights.pth")

@@ -1,5 +1,4 @@
 import copy
-import json
 from agent_code.TRAIN_3Conv1Hidden1Subsampling.helperFunctions import (action_not_possible, action_leads_to_dying,
                                                                        in_scope_of_bomb_after_action,
                                                                        cannot_escape_after_action,

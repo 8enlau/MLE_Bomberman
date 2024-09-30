@@ -452,5 +452,4 @@ def act(agent, game_state: dict):
     maxPrediction = max(prediction)
     indices = [i for i, v in enumerate(prediction) if v == maxPrediction]
     index = np.random.choice(indices)
-
     return agent.actions[index]
