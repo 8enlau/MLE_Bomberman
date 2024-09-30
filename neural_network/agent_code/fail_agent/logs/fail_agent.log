@@ -1,0 +1,8 @@
+2024-09-02 18:35:13,930 [fail_agent_wrapper] ERROR: 
+Traceback (most recent call last):
+  File "/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/create_Dataset/agents.py", line 249, in process_event
+    event_result = getattr(module, event_name)(self.fake_self, *event_args)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/create_Dataset/agent_code/fail_agent/callbacks.py", line 9, in act
+    raise ValueError()
+ValueError
