@@ -1,7 +1,6 @@
 import json
 import logging
 import pickle
-import subprocess
 from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
@@ -17,12 +16,16 @@ from create_Dataset.fallbacks import pygame
 from create_Dataset.items import Coin, Explosion, Bomb
 
 WorldArgs = namedtuple("WorldArgs",
-                       ["no_gui", "fps", "turn_based", "update_interval", "save_replay", "replay", "make_video", "continue_without_training", "log_dir", "save_stats", "match_name", "seed", "silence_errors", "scenario"])
+                       ["no_gui", "fps", "turn_based", "update_interval", "save_replay", "replay", "make_video",
+                        "continue_without_training", "log_dir", "save_stats", "match_name", "seed", "silence_errors",
+                        "scenario"])
+
 
 class Trophy:
     coin_trophy = pygame.transform.smoothscale(pygame.image.load(s.ASSET_DIR / 'coin.png'), (15, 15))
     suicide_trophy = pygame.transform.smoothscale(pygame.image.load(s.ASSET_DIR / 'explosion_0.png'), (15, 15))
     time_trophy = pygame.image.load(s.ASSET_DIR / 'hourglass.png')
+
 
 class GenericWorld:
     logger: logging.Logger
@@ -101,7 +104,7 @@ class GenericWorld:
     def build_arena(self) -> Tuple[np.array, List[Coin], List[Agent]]:
         raise NotImplementedError()
 
-    def add_agent(self, agent_dir, name,train=False,):
+    def add_agent(self, agent_dir, name, train=False, ):
         assert len(self.agents) < s.MAX_AGENTS
 
         # if self.args.single_process:
@@ -323,6 +326,7 @@ class GenericWorld:
             with open(name, "w") as file:
                 json.dump(results, file, indent=4, sort_keys=True)
 
+
 class BombeRLeWorld(GenericWorld):
     def __init__(self, args: WorldArgs, agents):
         super().__init__(args)
@@ -330,7 +334,7 @@ class BombeRLeWorld(GenericWorld):
         self.rng = np.random.default_rng(args.seed)
         self.setup_agents(agents)
 
-    def setup_agents(self,agents):
+    def setup_agents(self, agents):
         # Add specified agents and start their subprocesses
         self.agents = []
         for agent_dir, train in agents:
@@ -444,7 +448,8 @@ class BombeRLeWorld(GenericWorld):
                 self.logger.info(f'Agent <{a.name}> chose action {action} in {think_time:.2f}s.')
                 if think_time > a.available_think_time:
                     next_think_time = a.base_timeout - (think_time - a.available_think_time)
-                    self.logger.warning(f'Agent <{a.name}> exceeded think time by {think_time - a.available_think_time:.2f}s. Setting action to "WAIT" and decreasing available time for next round to {next_think_time:.2f}s.')
+                    self.logger.warning(
+                        f'Agent <{a.name}> exceeded think time by {think_time - a.available_think_time:.2f}s. Setting action to "WAIT" and decreasing available time for next round to {next_think_time:.2f}s.')
                     action = "WAIT"
                     a.trophies.append(Trophy.time_trophy)
                     a.available_think_time = next_think_time
@@ -504,35 +509,35 @@ class BombeRLeWorld(GenericWorld):
         for a in self.agents:
             # Send exit message to shut down agent
             self.logger.debug(f'Sending exit message to agent <{a.name}>')
-            # todo multiprocessing shutdown
 
-    def print_gameplay(self,args):
+    def print_gameplay(self, args):
         file_name = f'Dataset/{args.dataset_counter}_{args.n_rounds}rounds_ordered.json'
-        diction_list=[]
-        sorted_dict=[]
+        diction_list = []
+        sorted_dict = []
         for i in range(args.n_rounds):
             diction_list.append([])
         for a in self.agents:
             for diction in a.gameplay:
-                other_players=[]
+                other_players = []
                 for l in diction['others']:
-                    other_players.append((l[0],l[1],l[2],(int(l[3][0]),int(l[3][1]))))
-                other_players.append((diction["self"][0],diction["self"][1],diction["self"][2],(int(diction["self"][3][0]),int(diction["self"][3][1]))))
-                diction["others"]=other_players
+                    other_players.append((l[0], l[1], l[2], (int(l[3][0]), int(l[3][1]))))
+                other_players.append((diction["self"][0], diction["self"][1], diction["self"][2],
+                                      (int(diction["self"][3][0]), int(diction["self"][3][1]))))
+                diction["others"] = other_players
                 del diction["self"]
-                if not isinstance(diction["explosion_map"],list):
-                    diction["explosion_map"]=diction["explosion_map"].tolist()
-                if not isinstance(diction["field"],list):
-                    diction["field"]=diction["field"].tolist()
-                bom=[]
+                if not isinstance(diction["explosion_map"], list):
+                    diction["explosion_map"] = diction["explosion_map"].tolist()
+                if not isinstance(diction["field"], list):
+                    diction["field"] = diction["field"].tolist()
+                bom = []
                 for l in diction["bombs"]:
-                    bom.append(((int(l[0][0]),int(l[0][1])),int(l[1])))
-                diction["bombs"]=bom
-                coin=[]
+                    bom.append(((int(l[0][0]), int(l[0][1])), int(l[1])))
+                diction["bombs"] = bom
+                coin = []
                 for l in diction["coins"]:
-                    coin.append((int(l[0]),int(l[1])))
-                diction["coins"]=coin
-                game_round=diction["round"]-1
+                    coin.append((int(l[0]), int(l[1])))
+                diction["coins"] = coin
+                game_round = diction["round"] - 1
                 del diction["round"]
                 diction_list[game_round].append(diction)
         for i in diction_list:

@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 import torch.nn as nn
 from torch.nn.functional import conv2d, max_pool2d
 import copy

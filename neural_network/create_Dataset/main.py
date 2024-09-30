@@ -1,6 +1,3 @@
-import os
-from argparse import ArgumentParser
-from pathlib import Path
 import yaml
 from time import sleep, time
 from tqdm import tqdm
@@ -8,26 +5,26 @@ import random
 import create_Dataset.settings as s
 from create_Dataset.environment import BombeRLeWorld
 from create_Dataset.fallbacks import pygame, LOADED_PYGAME
-from create_Dataset.replay import ReplayWorld
 
 
 class parser_replacement:
-    def __init__(self,config):
-        self.train=config["train"]
-        self.n_rounds=config["n_rounds"]
-        self.save_stats=config["save_stats"]
-        self.log_dir=config["log_dir"]
-        self.my_agent=config["my_agent"]
-        self.seed=config["seed"]
-        self.play_parserscenario=config["play_parserscenario"]
-        self.silence_errors=config["silence_errors"]
-        self.save_replay=config["save_replay"]
-        self.skip_frames=config["skip_frames"]
-        self.turn_based=config["turn_based"]
-        self.update_interval=config["update_interval"]
-        self.match_name=config["match_name"]
-        self.dataset_counter=config["dataset_counter"]
-        self.continue_without_training=config["continue_without_training"]
+    def __init__(self, config):
+        self.train = config["train"]
+        self.n_rounds = config["n_rounds"]
+        self.save_stats = config["save_stats"]
+        self.log_dir = config["log_dir"]
+        self.my_agent = config["my_agent"]
+        self.seed = config["seed"]
+        self.play_parserscenario = config["play_parserscenario"]
+        self.silence_errors = config["silence_errors"]
+        self.save_replay = config["save_replay"]
+        self.skip_frames = config["skip_frames"]
+        self.turn_based = config["turn_based"]
+        self.update_interval = config["update_interval"]
+        self.match_name = config["match_name"]
+        self.dataset_counter = config["dataset_counter"]
+        self.continue_without_training = config["continue_without_training"]
+
 
 class Timekeeper:
     def __init__(self, interval):
@@ -45,9 +42,9 @@ class Timekeeper:
             duration = self.next_time - time()
             sleep(duration)
 
-def world_controller(world, n_rounds, args,*,
-                     gui, every_step, turn_based, update_interval):
 
+def world_controller(world, n_rounds, args, *,
+                     gui, every_step, turn_based, update_interval):
     gui_timekeeper = Timekeeper(update_interval)
 
     def render(wait_until_due):
@@ -77,21 +74,19 @@ def world_controller(world, n_rounds, args,*,
     world.end()
 
 
-
-
-def mainFunction(config,FurtherAgents=False):
+def mainFunction(config, FurtherAgents=False):
     args = parser_replacement(config)
     # Initialize environment and agents
     agents = []
     if FurtherAgents:
-        agents.append((FurtherAgents,True))
-        agents.append((FurtherAgents,True))
-        agents.append(("rule_based_agent",False))
-        possibleAgents = ["random_agent","rule_based_agent","coin_collector_agent",
-                          "peaceful_agent",FurtherAgents]
+        agents.append((FurtherAgents, True))
+        agents.append((FurtherAgents, True))
+        agents.append(("rule_based_agent", False))
+        possibleAgents = ["random_agent", "rule_based_agent", "coin_collector_agent",
+                          "peaceful_agent", FurtherAgents]
         last_agent = random.choice(possibleAgents)
         print("Last agent: ", last_agent)
-        agents.append((last_agent,False))
+        agents.append((last_agent, False))
     else:
         if args.my_agent:
             agents.append((args.my_agent, len(agents) < args.train))
@@ -102,22 +97,22 @@ def mainFunction(config,FurtherAgents=False):
     every_step = not args.skip_frames
 
     gui = None
-    world_controller(world, args.n_rounds,args,
-                    gui=gui, every_step=every_step, turn_based=args.turn_based,
-                    update_interval=args.update_interval)
+    world_controller(world, args.n_rounds, args,
+                     gui=gui, every_step=every_step, turn_based=args.turn_based,
+                     update_interval=args.update_interval)
 
-    args.dataset_counter+=1
-    argsDict={}
+    args.dataset_counter += 1
+    argsDict = {}
     for key in vars(args):
-        argsDict[key]=getattr(args, key)
+        argsDict[key] = getattr(args, key)
     with open('create_Dataset/config.yaml', 'w') as file:
         yaml.dump(argsDict, file, default_flow_style=False, allow_unicode=False)
 
 
 if __name__ == '__main__':
-    #what about that training_mode?!
+    # what about that training_mode?!
     with open('config.yaml', 'r') as file:
         config = yaml.safe_load(file)
-#    args=parser_replacement(config)
+    #    args=parser_replacement(config)
 
     mainFunction(config)

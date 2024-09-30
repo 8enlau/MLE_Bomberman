@@ -1,44 +1,45 @@
 import numpy as np
-import copy
 from collections import deque
 
-def position_after_step(situation,action):
+
+def position_after_step(situation, action):
     after_action = []
-    for i in range(len(situation["self"]) -1 ):
+    for i in range(len(situation["self"]) - 1):
         after_action.append(situation["self"][i])
-    pos = [situation["self"][-1][0],situation["self"][-1][1]]
+    pos = [situation["self"][-1][0], situation["self"][-1][1]]
     after_action.append(pos)
     if action == "UP":
         after_action[-1][1] -= 1
     elif action == "DOWN":
         after_action[-1][1] += 1
-    elif action =="LEFT":
+    elif action == "LEFT":
         after_action[-1][0] -= 1
-    elif action =="RIGHT":
+    elif action == "RIGHT":
         after_action[-1][0] += 1
     elif action == "BOMB":
-        situation["bombs"].append([after_action[-1],3])
+        situation["bombs"].append([after_action[-1], 3])
     elif action == "WAIT":
         pass
-    return(after_action)
+    return (after_action)
 
-def in_line_of_bomb(situation,after_action):
-    x=after_action[-1][0]
-    y=after_action[-1][1]
-    inLineBombs=[]
+
+def in_line_of_bomb(situation, after_action):
+    x = after_action[-1][0]
+    y = after_action[-1][1]
+    inLineBombs = []
     for bomb in situation["bombs"]:
-        x_bomb=bomb[0][0]
-        y_bomb=bomb[0][1]
-        if x_bomb-3<=x<=x_bomb+3:
-            if y_bomb==y:
-                in_line=True
-                if x_bomb<x:
-                    for i in range(1,x-x_bomb):
-                        if situation["field"][x_bomb+i][y]==-1:
-                            in_line=False
+        x_bomb = bomb[0][0]
+        y_bomb = bomb[0][1]
+        if x_bomb - 3 <= x <= x_bomb + 3:
+            if y_bomb == y:
+                in_line = True
+                if x_bomb < x:
+                    for i in range(1, x - x_bomb):
+                        if situation["field"][x_bomb + i][y] == -1:
+                            in_line = False
                             break
                 else:
-                    for i in range(1,x_bomb-x):
+                    for i in range(1, x_bomb - x):
                         if situation["field"][x + i][y] == -1:
                             in_line = False
                             break
@@ -47,23 +48,25 @@ def in_line_of_bomb(situation,after_action):
                 continue
         if y_bomb - 3 <= y <= y_bomb + 3:
             if x_bomb == x:
-                in_line=True
-                if y_bomb<y:
-                    for i in range(1,y-y_bomb):
-                        if situation["field"][x][y_bomb+i]==-1:
-                            in_line=False
+                in_line = True
+                if y_bomb < y:
+                    for i in range(1, y - y_bomb):
+                        if situation["field"][x][y_bomb + i] == -1:
+                            in_line = False
                             break
                 else:
-                    for i in range(1,y_bomb-y):
-                        if situation["field"][x][y+i] == -1:
+                    for i in range(1, y_bomb - y):
+                        if situation["field"][x][y + i] == -1:
                             in_line = False
                             break
                 if in_line:
                     inLineBombs.append(bomb)
     return inLineBombs
-def position_not_in_line_of_bomb(position,bomb,situation,):
-    x=position[0]
-    y=position[1]
+
+
+def position_not_in_line_of_bomb(position, bomb, situation, ):
+    x = position[0]
+    y = position[1]
     x_bomb = bomb[0][0]
     y_bomb = bomb[0][1]
     if x_bomb - 3 <= x <= x_bomb + 3:
@@ -98,216 +101,237 @@ def position_not_in_line_of_bomb(position,bomb,situation,):
                 return False
     return True
 
-def position_is_occupied(situation,x,y,additionalBlock=[]):
-    if situation["field"][x][y]!=0:
+
+def position_is_occupied(situation, x, y, additionalBlock=[]):
+    if situation["field"][x][y] != 0:
         return True
     for bomb in situation["bombs"]:
-        x_bomb=bomb[0][0]
-        y_bomb=bomb[0][1]
-        if x==x_bomb:
-            if y==y_bomb:
+        x_bomb = bomb[0][0]
+        y_bomb = bomb[0][1]
+        if x == x_bomb:
+            if y == y_bomb:
                 return True
     for player in situation["others"]:
-        x_player=player[-1][0]
-        y_player=player[-1][1]
-        if x==x_player:
-            if y==y_player:
-                return True #TODO what if two players stand next to each other walking in the same direction?
+        x_player = player[-1][0]
+        y_player = player[-1][1]
+        if x == x_player:
+            if y == y_player:
+                return True
     if additionalBlock:
         for i in additionalBlock:
-            x_i=i[0]
-            y_i=i[1]
-            if x==x_i:
-                if y==y_i:
+            x_i = i[0]
+            y_i = i[1]
+            if x == x_i:
+                if y == y_i:
                     return True
     return False
 
-def player_escapes_bomb(situation,bomb,player,additionalBlock=[],increaseTimer=False):
-    playerPosition=(player[-1][0],player[-1][1])
+
+def player_escapes_bomb(situation, bomb, player, additionalBlock=[], increaseTimer=False):
+    playerPosition = (player[-1][0], player[-1][1])
     timer = bomb[1]
     if increaseTimer:
         timer += 1
-    return(find_path(playerPosition,timer,bomb,situation,additionalBlock))
+    return (find_path(playerPosition, timer, bomb, situation, additionalBlock))
 
 
-
-def find_path(position,timer,bomb,situation,additionalBlock):
-    if position_not_in_line_of_bomb(position,bomb,situation):
+def find_path(position, timer, bomb, situation, additionalBlock):
+    if position_not_in_line_of_bomb(position, bomb, situation):
         return True
-    x=position[0]
-    y=position[1]
-    neighbours=[(x+1,y),(x-1,y),(x,y+1),(x,y-1)]
-    freeNeighbours=[i for i in neighbours if not position_is_occupied(situation,i[0],i[1],additionalBlock)]
+    x = position[0]
+    y = position[1]
+    neighbours = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+    freeNeighbours = [i for i in neighbours if not position_is_occupied(situation, i[0], i[1], additionalBlock)]
     if timer >= 1:
         timer -= 1
         for i in freeNeighbours:
-            nextPath=find_path(i,timer,bomb,situation,additionalBlock)
+            nextPath = find_path(i, timer, bomb, situation, additionalBlock)
             if nextPath:
                 return True
     return False
 
 
 #######################################################################
-def action_not_possible(situation,action,after_action):
-    if action =="WAIT":
+def action_not_possible(situation, action, after_action):
+    if action == "WAIT":
         return False
     if action == "BOMB":
-        if situation["self"][2]==False:
+        if situation["self"][2] == False:
             return True
         return False
 
-    x=after_action[-1][0]
-    y=after_action[-1][1]
-    return position_is_occupied(situation,x,y)
+    x = after_action[-1][0]
+    y = after_action[-1][1]
+    return position_is_occupied(situation, x, y)
 
-def action_leads_to_dying(situation,after_action):
-    x=after_action[-1][0]
-    y=after_action[-1][1]
-    bombs = in_line_of_bomb(situation,after_action)
+
+def action_leads_to_dying(situation, after_action):
+    x = after_action[-1][0]
+    y = after_action[-1][1]
+    bombs = in_line_of_bomb(situation, after_action)
     if bombs:
         for bomb in bombs:
-            if bomb[-1]==0:
+            if bomb[-1] == 0:
                 return True
-    if situation["explosion_map"][x][y]!=0:
+    if situation["explosion_map"][x][y] != 0:
         return True
     return False
 
-def in_scope_of_bomb_after_action(situation,action,after_action):
-    return in_line_of_bomb(situation,after_action)
 
-def cannot_escape_after_action(situation,action,after_action,bombs):
+def in_scope_of_bomb_after_action(situation, action, after_action):
+    return in_line_of_bomb(situation, after_action)
+
+
+def cannot_escape_after_action(situation, action, after_action, bombs):
     for bomb in bombs:
-        if action == "BOMB" and list(situation["self"][-1])==list(bomb[0]):
-            if not player_escapes_bomb(situation, bomb, after_action,increaseTimer=True):
+        if action == "BOMB" and list(situation["self"][-1]) == list(bomb[0]):
+            if not player_escapes_bomb(situation, bomb, after_action, increaseTimer=True):
                 return True
         else:
-            if not player_escapes_bomb(situation,bomb,after_action):
+            if not player_escapes_bomb(situation, bomb, after_action):
                 return True
     return False
 
 
-def bomb_will_kill_opponent(situation,after_action): # TODO Differentiate between how many players are killed?
-    bomb = situation["bombs"][-1] # TODO is this really the bomb our player planted?
+def bomb_will_kill_opponent(situation, after_action):
+    bomb = situation["bombs"][-1]
     for player in situation["others"]:
-        if not player_escapes_bomb(situation,bomb,player):
-            return True
-    return False
-def bomb_might_kill_opponent(situation,after_action):
-    bomb = situation["bombs"][-1] # TODO is this really the bomb our player planted?
-    bombPosition=np.array(bomb[0])
-    for player in situation["others"]:
-        if not position_not_in_line_of_bomb(player[-1],bomb,situation): # TODO find a broader sense of "player close to bomb, might walk into it"
-            return True
-        playerPosition=np.array(player[-1])
-        if np.linalg.norm(bombPosition-playerPosition)<=5: #TODO is 5 good ?! Also not considering things blocking path
+        if not player_escapes_bomb(situation, bomb, player):
             return True
     return False
 
 
-def bomb_shortens_path_to_coin(situation,action,after_action):
-    if bomb_will_destroy_crates(situation,after_action):
+def bomb_might_kill_opponent(situation, after_action):
+    bomb = situation["bombs"][-1]
+    bombPosition = np.array(bomb[0])
+    for player in situation["others"]:
+        if not position_not_in_line_of_bomb(player[-1], bomb,
+                                            situation):
+            return True
+        playerPosition = np.array(player[-1])
+        if np.linalg.norm(
+                bombPosition - playerPosition) <= 5:
+            return True
+    return False
+
+
+def bomb_shortens_path_to_coin(situation, action, after_action):
+    if bomb_will_destroy_crates(situation, after_action):
         bomb = situation["bombs"][-1]
         x_bomb = bomb[0][0]
         y_bomb = bomb[0][1]
         bombArea = calculate_bomb_area(x_bomb, y_bomb)
-        formerCrates=[i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]
+        formerCrates = [i for i in bombArea if situation["field"][i[0]][i[1]] == 1]
         for i in formerCrates:
             if closer_distance_to_coin(situation, [i]):
                 return True
     return False
 
-def closer_distance_to_coin(situation,after_action):
+
+def closer_distance_to_coin(situation, after_action):
     if situation["coins"]:
-        position_new= np.array([after_action[-1][0], after_action[-1][1]])
+        position_new = np.array([after_action[-1][0], after_action[-1][1]])
         position_old = np.array(situation["self"][-1])
-        coinDistances=[]
+        coinDistances = []
         for coin in situation["coins"]:
-            coinDistances.append(np.linalg.norm(position_old-coin))
+            coinDistances.append(np.linalg.norm(position_old - coin))
         coin = situation["coins"][coinDistances.index(min(coinDistances))]
-        if np.linalg.norm(position_old-coin)>np.linalg.norm(position_new-coin):
+        if np.linalg.norm(position_old - coin) > np.linalg.norm(position_new - coin):
             return True
     return False
-def bomb_will_destroy_crates(situation,after_action):
+
+
+def bomb_will_destroy_crates(situation, after_action):
     bomb = situation["bombs"][-1]
     x_bomb = bomb[0][0]
-    y_bomb=bomb[0][1]
-    bombArea=calculate_bomb_area(x_bomb,y_bomb)
-    if any([i for i in bombArea if situation["field"][i[0]][i[1]] == 1 ]):
+    y_bomb = bomb[0][1]
+    bombArea = calculate_bomb_area(x_bomb, y_bomb)
+    if any([i for i in bombArea if situation["field"][i[0]][i[1]] == 1]):
         return True
     return False
-def calculate_bomb_area(x_bomb,y_bomb):
-    bombArea=[]
-    for i in range(1,4):
+
+
+def calculate_bomb_area(x_bomb, y_bomb):
+    bombArea = []
+    for i in range(1, 4):
         if x_bomb + i < 16:
-            bombArea.append([x_bomb + i,y_bomb])
+            bombArea.append([x_bomb + i, y_bomb])
         if x_bomb - i > 0:
             bombArea.append([x_bomb - i, y_bomb])
-        if y_bomb + i <16:
+        if y_bomb + i < 16:
             bombArea.append([x_bomb, y_bomb + i])
         if y_bomb - i > 0:
             bombArea.append([x_bomb, y_bomb - i])
     return bombArea
-def action_leads_to_dying_opponent(situation,action,after_action):
-    playerPosition=[(after_action[-1][0],after_action[-1][1])]
+
+
+def action_leads_to_dying_opponent(situation, action, after_action):
+    playerPosition = [(after_action[-1][0], after_action[-1][1])]
     for bomb in situation["bombs"]:
         for player in situation["others"]:
-            if not player_escapes_bomb(situation,bomb,player,playerPosition):
-                if player_escapes_bomb(situation,bomb,player):
+            if not player_escapes_bomb(situation, bomb, player, playerPosition):
+                if player_escapes_bomb(situation, bomb, player):
                     return True
     return False
 
-def collecting_coin(situation,action,after_action):
-    position= [after_action[-1][0], after_action[-1][1]]
+
+def collecting_coin(situation, action, after_action):
+    position = [after_action[-1][0], after_action[-1][1]]
     for coin in situation["coins"]:
         if list(coin) == position:
             return True
 
-def walking_closer_to_reachable_coin(situation,after_action):
-    position_new= [after_action[-1][0], after_action[-1][1]]
+
+def walking_closer_to_reachable_coin(situation, after_action):
+    position_new = [after_action[-1][0], after_action[-1][1]]
     position_old = np.array(situation["self"][-1])
-    shortest_path=25
-    bestAction=None
+    shortest_path = 25
+    bestAction = None
     for coin in situation["coins"]:
-        path=bfs_find_path(situation, position_old, list(coin))
+        path = bfs_find_path(situation, position_old, list(coin))
         if path:
-            if len(path)<shortest_path:
-                shortest_path=len(path)
-                bestAction=path[0]
-    if bestAction==position_new:
+            if len(path) < shortest_path:
+                shortest_path = len(path)
+                bestAction = path[0]
+    if bestAction == position_new:
         return True
     return False
-def no_coin_reachable(situation,after_action):
-    position_new= np.array([after_action[-1][0], after_action[-1][1]])
+
+
+def no_coin_reachable(situation, after_action):
+    position_new = np.array([after_action[-1][0], after_action[-1][1]])
     position_old = np.array(situation["self"][-1])
     for coin in situation["coins"]:
-        path=bfs_find_path(situation, position_old, list(coin))
+        path = bfs_find_path(situation, position_old, list(coin))
         if path:
             return False
     return True
+
+
 ##################################################################
-def position_is_occupied_or_already_visited(situation,x,y,visited,additionalBlock=[]):
-    if situation["field"][x][y]!=0:
+def position_is_occupied_or_already_visited(situation, x, y, visited, additionalBlock=[]):
+    if situation["field"][x][y] != 0:
         return True
     if visited[x][y]:
         return True
     for bomb in situation["bombs"]:
-        x_bomb=bomb[0][0]
-        y_bomb=bomb[0][1]
-        if x==x_bomb:
-            if y==y_bomb:
+        x_bomb = bomb[0][0]
+        y_bomb = bomb[0][1]
+        if x == x_bomb:
+            if y == y_bomb:
                 return True
     for player in situation["others"]:
-        x_player=player[-1][0]
-        y_player=player[-1][1]
-        if x==x_player:
-            if y==y_player:
-                return True #TODO what if two players stand next to each other walking in the same direction?
+        x_player = player[-1][0]
+        y_player = player[-1][1]
+        if x == x_player:
+            if y == y_player:
+                return True
     if additionalBlock:
         for i in additionalBlock:
-            x_i=i[0]
-            y_i=i[1]
-            if x==x_i:
-                if y==y_i:
+            x_i = i[0]
+            y_i = i[1]
+            if x == x_i:
+                if y == y_i:
                     return True
     return False
 
@@ -332,19 +356,21 @@ def bfs_find_path(situation, start, goal):
 
         for dx, dy in directions:
             nx, ny = x + dx, y + dy
-            if not position_is_occupied_or_already_visited(situation,nx, ny, visited):
+            if not position_is_occupied_or_already_visited(situation, nx, ny, visited):
                 queue.append((nx, ny))
                 visited[nx][ny] = True
                 parent[nx][ny] = (x, y)
     return None  # Return None if no path exists
 
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     import json
-    with open("/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/12_2rounds_ordered.json", "r") as file:
+
+    with open(
+            "/home/benni/Documents/Studium/4. Master/Machine Learning Essentials/MLE_Bomberman/neural_network/Dataset/12_2rounds_ordered.json",
+            "r") as file:
         file_read = json.load(file)
-    readyData=[]
+    readyData = []
     situation = {'round': 1, 'step': 24,
                  'field': np.array([[-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
                                     [-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1],
@@ -370,7 +396,7 @@ if __name__=="__main__":
                             ('rule_based_agent_2', 0, False, (np.int64(5), np.int64(14)))],
                  'bombs': [((np.int64(11), np.int64(1)), 1),
                            ((np.int64(12), np.int64(14)), 2)],
-                 'coins': [(11,5),(10,2),(11,1)],
+                 'coins': [(11, 5), (10, 2), (11, 1)],
                  'user_input': None,
                  'explosion_map': np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
                                              0.],
@@ -408,16 +434,15 @@ if __name__=="__main__":
                                              0.]])}
 
     bomb = situation["bombs"][0]
-    after_action = ['DET_Rewards', 0, False, [11,3]]
+    after_action = ['DET_Rewards', 0, False, [11, 3]]
 
     print(cannot_escape_after_action(situation, "BOMB", after_action, situation["bombs"]))
-    print(in_scope_of_bomb_after_action(situation,"BOMB",after_action))
-    if in_scope_of_bomb_after_action(situation,"BOMB",after_action):
+    print(in_scope_of_bomb_after_action(situation, "BOMB", after_action))
+    if in_scope_of_bomb_after_action(situation, "BOMB", after_action):
         print("Happening")
-    print(action_leads_to_dying(situation,after_action))
+    print(action_leads_to_dying(situation, after_action))
 
     print("COINS")
-    print(no_coin_reachable(situation,after_action))
-    print(walking_closer_to_reachable_coin(situation,after_action))
-    print(closer_distance_to_coin(situation,after_action))
-
+    print(no_coin_reachable(situation, after_action))
+    print(walking_closer_to_reachable_coin(situation, after_action))
+    print(closer_distance_to_coin(situation, after_action))

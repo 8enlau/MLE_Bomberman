@@ -1,3 +1,0 @@
-Training first with 70 played rounds and batch-size 16384. This was taking too long. We trained it over night, but only 6 of those cycles were finished at the end. Also the trainerror was still over 90%. 
-
- so we reduced it to batch size 2048 and 40 played games. 

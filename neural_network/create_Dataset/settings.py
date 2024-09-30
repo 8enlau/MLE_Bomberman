@@ -9,7 +9,7 @@ COLS = 17
 ROWS = 17
 SCENARIOS = {
     # modes useful for agent development
-	"empty": {
+    "empty": {
         "CRATE_DENSITY": 0,
         "COIN_COUNT": 0
     },

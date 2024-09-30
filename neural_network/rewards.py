@@ -1,5 +1,4 @@
 import copy
-import json
 from helperFunctions import (action_not_possible, action_leads_to_dying,
                              in_scope_of_bomb_after_action, cannot_escape_after_action,
                              bomb_will_kill_opponent, bomb_might_kill_opponent, bomb_shortens_path_to_coin,
