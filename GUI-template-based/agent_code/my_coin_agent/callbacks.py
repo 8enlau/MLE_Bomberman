@@ -339,7 +339,7 @@ def find_coin_direction_dijkstra(game_state, x, y):
     return dir
 
 
-def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
+def end_of_round_game(self, last_game_state: dict, last_action: str, events: List[str]):
     """
     used for graphing
     """

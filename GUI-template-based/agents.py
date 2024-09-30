@@ -18,6 +18,7 @@ AGENT_API = {
     "callbacks": {
         "setup": ["self"],
         "act": ["self", "game_state: dict"],
+        "end_of_round_game": ["self", "game_state: dict", "last_action: str", "events: List[str]"]
     },
     "train": {
         "setup_training": ["self"],
@@ -180,9 +181,14 @@ class Agent:
         self.last_action = action
         return action, think_time
 
-    def round_ended(self):
-        self.backend.send_event("end_of_round", self.last_game_state, self.last_action, self.events)
-        self.backend.get("end_of_round")
+    def round_ended(self, type):
+        if type == 'train':
+            self.backend.send_event("end_of_round", self.last_game_state, self.last_action, self.events)
+            self.backend.get("end_of_round")
+        else:
+            self.backend.send_event("end_of_round_game", self.last_game_state, self.last_action, self.events)
+            self.backend.get("end_of_round_game")
+
 
     def render(self, screen, x, y):
         """Draw the agent's avatar to the screen at the given coordinates."""

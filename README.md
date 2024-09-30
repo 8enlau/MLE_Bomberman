@@ -45,4 +45,31 @@ This repository contains multiple agents developed to play Bomberman. Below is a
   8. **`helperFunctions.py`**  
      Includes functions that assist the reward function and other tasks in the neural network approach.
 
+### 2. Q-Learning Approach
+
+- **`GUI-template-based/`**  
+  This folder contains all the code from the bomberman_rl framework provided in the project description, with the following additions and modifications:
+
+  1. **`agent_code/`**  
+      Contains the code of select default agents that were used, and our created agents.
+      - Modifications to default agents:
+         a. `coin_collector_agent`: had the `end_of_round_game` function added for graphing.
+         b. `rule_based_agent`: same as above.
+      - Our agents
+         a. `tpl_based_agent`: first experimentation and understanding of the code. Also containg graphing function, data, and multiple saved model versions.
+         b. `my_coin_agent`: first agent with the goal of efficient navigation and coin collection. Also containg graphing function, data,  and multiple saved model versions.
+         c. `my_box_agent`: agent with the goal of efficient coin collection but with boxes that must be destroyed, without the agent killing itself.
+         d. `the-rolling-bomber`: final submission without the `end_of_round_game` function (as this would cause an error in the competition)
+   
+   2. **`graph-generator`**
+      Contains the code, data and images used when graphing a 4-player competition for the report.
+
+   3. **Remaining subdirectories**
+      Are identical to the framework and are included so that the agent can be run with GUI.
+
+   4. **Modified Files**
+      - `settings.py`: Custom few-crates scenario added.
+      - `environment.py`: Lines 495-497, end of round events are also sent in game, not just training, for graphing purposes.
+      - `agents.py`: Added "end_of_round_game" API and modified the round_ended() function to use this in game.
+
 ---

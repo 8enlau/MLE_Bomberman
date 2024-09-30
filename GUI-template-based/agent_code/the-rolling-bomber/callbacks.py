@@ -5,6 +5,7 @@ import heapq
 from collections import deque
 
 import numpy as np
+import csv
 
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
@@ -428,3 +429,25 @@ def find_crate_direction(game_state, start_x, start_y):
                         q.append((first_direction, new_x, new_y))
                 
     return 4  # wait if no way to a crate
+
+def end_of_round_game(self, game_state: dict, last_action: str, events):
+    """
+    used for graphing
+    """
+    file_name = f'{game_state["self"][0]}_gamedata.csv'
+    steps_survived = game_state['step']
+    round = game_state['round']
+    score = game_state['self'][1]
+    GRAPH_ROUNDS.append(round)
+    GRAPH_SCORE.append(score)
+    GRAPH_STEPS.append(steps_survived)
+    GRAPH_SCORE_MEAN.append(np.mean(GRAPH_SCORE))
+    GRAPH_STEPS_MEAN.append(np.mean(GRAPH_STEPS))
+    with open(file_name, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(GRAPH_ROUNDS)
+        writer.writerow(GRAPH_SCORE)
+        writer.writerow(GRAPH_SCORE_MEAN)
+        writer.writerow(GRAPH_STEPS)
+        writer.writerow(GRAPH_STEPS_MEAN)
+    f.close()    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")

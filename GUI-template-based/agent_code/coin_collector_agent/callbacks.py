@@ -2,6 +2,13 @@ from random import shuffle
 
 import numpy as np
 import settings as s
+import csv
+
+GRAPH_ROUNDS = []
+GRAPH_STEPS = []
+GRAPH_STEPS_MEAN = []
+GRAPH_SCORE = []
+GRAPH_SCORE_MEAN = []
 
 
 def look_for_targets(free_space, start, targets, logger=None):
@@ -172,3 +179,24 @@ def act(self, game_state):
         a = action_ideas.pop()
         if a in valid_actions:
             return a
+
+def end_of_round_game(self, last_game_state: dict, last_action: str, events):
+    """
+    used for graphing
+    """
+    steps_survived = last_game_state['step']
+    round = last_game_state['round']
+    score = last_game_state['self'][1]
+    GRAPH_ROUNDS.append(round)
+    GRAPH_SCORE.append(score)
+    GRAPH_STEPS.append(steps_survived)
+    GRAPH_SCORE_MEAN.append(np.mean(GRAPH_SCORE))
+    GRAPH_STEPS_MEAN.append(np.mean(GRAPH_STEPS))
+    with open('game_data.csv', 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(GRAPH_ROUNDS)
+        writer.writerow(GRAPH_SCORE)
+        writer.writerow(GRAPH_SCORE_MEAN)
+        writer.writerow(GRAPH_STEPS)
+        writer.writerow(GRAPH_STEPS_MEAN)
+    f.close()    # plot(PLOT_coins, PLOT_mean_coins, "Coins Collected")

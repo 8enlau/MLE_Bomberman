@@ -48,6 +48,7 @@ def setup(self):
         
         # Initialize the Q-table with the shape that matches the features
         self.model = np.random.rand(num_coin_directions, num_bomb_status, num_danger_status, num_escape_routes, len(ACTIONS))
+        print(self.model.shape)
     else:
         self.logger.info("Loading model from saved state.")
         with open(MODEL_FILE, "rb") as file:
@@ -442,6 +443,7 @@ def end_of_round_game(self, game_state: dict, last_action: str, events: List[str
     """
     used for graphing
     """
+    file_name = f'{game_state["self"][0]}_gamedata.csv'
     steps_survived = game_state['step']
     round = game_state['round']
     score = game_state['self'][1]
