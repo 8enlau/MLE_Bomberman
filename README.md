@@ -1,6 +1,7 @@
 # Bomberman Agent Repository
 
-This repository contains multiple agents developed to play Bomberman. Below is a detailed description of the structure and purpose of each folder and file.
+This repository contains multiple agents developed to play Bomberman. Below is a detailed description of the structure and purpose of each folder and file. 
+Based on the bomberman framework given in https://github.com/ukoethe/bomberman_rl .
 
 ## Repository Structure
 
