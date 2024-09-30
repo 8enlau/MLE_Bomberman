@@ -29,7 +29,7 @@ This repository contains multiple agents developed to play Bomberman. Below is a
   3. **`create_Datasets/`**  
      Contains a slightly adapted version of the Bomberman framework, stripped of GUI features and `argparse`. This script is used to generate the data stored in the `Dataset/` folder.
 
-  4. **`TRAIN*/`** (e.g., `TRAIN_v1`, `TRAIN_v2`, etc.)  
+  4. **`TRAIN*/`** (e.g., `TRAIN_6Conv`, `TRAIN_ThreeConvolutional`, etc.)  
      These folders store network layouts and training progress for each iteration of agent development.
      - Each folder contains a `networkLayout.py` file, which defines the neural network structure and the function that rewrites game states from a dictionary format into a 17x17 matrix format for the network.
 
