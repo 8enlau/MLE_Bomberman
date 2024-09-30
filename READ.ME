@@ -1,8 +1,0 @@
--->> python main.py play --agents random_agent,coin_collector_agent,user_agent,peaceful_agent --no-gui --log-dir Test
--->>  python main.py play --no-gui --n-rounds 3 --train 2
-
-First idea:
-We need a good dataset. The best dataset is the one consisting of the information the player gets in each step.
-So lets create a dataset by playing the game and saving each step of it. This is also a great way to learn, how the program works.
-So I copied the code, deleted most GUI stuff, because its not needed and added a function to save the games.
-A bomb is not stopped by one crate. It will run through all crates in its way, for the whole area of its explosion.
